@@ -13,6 +13,9 @@ Two pieces, one repo, no build step:
 
 ## What the almanac shows
 
+- **Live scores ribbon** (top of every view) — in-play scores and kick-off times from ESPN's public
+  scoreboard, fetched in the browser on load and auto-refreshed while games are live. Free, no key,
+  and **separate from the odds quota**.
 - **Tournament** (pick any edition 1930–2026) — group standings, the Golden Boot, when-goals-are-scored
   and goals-by-stage charts, confederation breakdown, the full **knockout bracket** (extra time &
   penalties resolved), a searchable **match explorer** with goal-by-goal detail, and penalties / own goals.
@@ -133,6 +136,7 @@ environment variable / secret.
 - **[martj42/international_results](https://github.com/martj42/international_results)** — international
   results history used for Elo and form (CC0).
 - **[the-odds-api.com](https://the-odds-api.com/)** — optional betting-market odds.
+- **ESPN public scoreboard** — live in-play scores (free, no key).
 - Elo methodology after **[World Football Elo Ratings](https://eloratings.net/)**.
 
 FIFA also publishes an official read-only API (the "Give Voice to Football" FAPIs); it's richer but

@@ -212,6 +212,22 @@ table{width:100%;border-collapse:collapse;font-size:13px}
 .endpoints b{color:var(--ink);font-weight:600}
 .tag{display:inline-block;font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);border:1px solid var(--gold2);border-radius:5px;padding:1px 7px;margin-left:6px;vertical-align:1px}
 ::-webkit-scrollbar{height:10px;width:10px}::-webkit-scrollbar-thumb{background:var(--line2);border-radius:6px}
+/* live scores ribbon (ESPN public feed — free, no key) */
+.livebar{display:flex;align-items:center;gap:12px;border:1px solid var(--line);border-radius:var(--r);background:linear-gradient(180deg,var(--panel2),var(--panel));padding:9px 12px;margin-bottom:14px}
+.livebar.empty{display:none}
+.livebar .lhead{flex:none;display:flex;align-items:center;gap:8px;font-family:"Bebas Neue";font-size:18px;letter-spacing:.06em;color:var(--ink)}
+.livebar .ldot{width:8px;height:8px;border-radius:50%;background:var(--red);box-shadow:0 0 8px var(--red);animation:lpulse 1.4s infinite}
+@keyframes lpulse{0%,100%{opacity:1}50%{opacity:.25}}
+.livebar .lscroll{display:flex;gap:8px;overflow-x:auto;flex:1;padding-bottom:2px}
+.lcard{flex:none;display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:var(--r-sm);padding:6px 11px;background:rgba(255,255,255,.02);font-size:12.5px;white-space:nowrap}
+.lcard .lt{display:flex;align-items:center;gap:6px;font-weight:600}
+.lcard .lsc{font-family:"Bebas Neue";font-size:19px;letter-spacing:.04em;padding:0 3px}
+.lcard .lst{font-size:8.5px;letter-spacing:.08em;text-transform:uppercase;padding:2px 6px;border-radius:5px;font-weight:700}
+.lst.in{background:rgba(232,85,60,.18);color:#ff7a63}.lst.post{background:rgba(255,255,255,.06);color:var(--muted)}.lst.pre{background:rgba(90,169,230,.14);color:var(--blue)}
+.livebar .lref{flex:none;appearance:none;border:1px solid var(--line2);background:transparent;color:var(--muted);border-radius:999px;width:30px;height:30px;cursor:pointer;font-size:14px}
+.livebar .lref:hover{color:var(--ink);border-color:var(--ink)}.livebar .lref:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
+.lflag{width:21px;height:14px;border-radius:2px;object-fit:cover;background:#1a241d;box-shadow:0 0 0 1px var(--line2);flex:none}
+@media(max-width:560px){.livebar .lhead span:not(.ldot){display:none}}
 /* keyboard focus visibility */
 .seg button:focus-visible,.chip:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
 .match:focus-visible{outline:2px solid var(--grass);outline-offset:-2px;background:rgba(255,255,255,.04)}
@@ -265,6 +281,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}
       </div>
     </div>
   </header>
+
+  <div class="livebar empty" id="liveBar" aria-label="Live scores"></div>
 
   <main id="app">
     <div class="loading"><div class="spinner"></div>Kicking off…</div>
@@ -1109,6 +1127,45 @@ function wireMatchExplorer(){
   draw();
 }
 
+/* ============================== LIVE SCORES (ESPN public feed — free, no key, no odds quota) ============================== */
+const ESPN_SB = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=";
+const ESPN_ALIAS = {"Congo DR":"DR Congo","Korea Republic":"South Korea","IR Iran":"Iran","Côte d'Ivoire":"Ivory Coast","United States":"USA","Czechia":"Czech Republic","Türkiye":"Turkey","Cabo Verde":"Cape Verde"};
+let liveTimer = null;
+const lflag = name => flag(ESPN_ALIAS[name] || name, "lflag");
+async function loadLiveScores(){
+  const bar = document.getElementById("liveBar"); if(!bar) return;
+  const pad = n => String(n).padStart(2,"0");
+  const day = o => { const x=new Date(Date.now()+o*864e5); return ""+x.getFullYear()+pad(x.getMonth()+1)+pad(x.getDate()); };
+  try{
+    const sets = await Promise.all([day(-1), day(0)].map(ds =>
+      fetch(ESPN_SB+ds, {cache:"no-store"}).then(r=>r.ok?r.json():{events:[]}).catch(()=>({events:[]}))));
+    const byId = {};
+    for(const s of sets) for(const ev of (s.events||[])) byId[ev.id] = ev;
+    const evs = Object.values(byId).map(ev=>{
+      const c=ev.competitions[0], cs=c.competitors;
+      const h=cs.find(x=>x.homeAway==="home")||cs[0], a=cs.find(x=>x.homeAway==="away")||cs[1];
+      const st=ev.status.type;
+      return {id:ev.id, date:ev.date, h:h.team.displayName, a:a.team.displayName, hs:h.score, as:a.score, state:st.state, detail:st.shortDetail};
+    }).sort((x,y)=> (y.state==="in")-(x.state==="in") || new Date(x.date)-new Date(y.date));
+    if(liveTimer){ clearTimeout(liveTimer); liveTimer=null; }
+    if(!evs.length){ bar.className="livebar empty"; bar.innerHTML=""; return; }
+    const live = evs.filter(e=>e.state==="in").length;
+    bar.className="livebar reveal in";
+    bar.innerHTML = `<div class="lhead">${live?'<span class="ldot"></span><span>LIVE</span>':'<span>Today</span>'}</div>
+      <div class="lscroll">${evs.map(e=>{
+        const badge = e.state==="in" ? `<span class="lst in">${escapeHtml(e.detail||"LIVE")}</span>`
+          : e.state==="post" ? `<span class="lst post">FT</span>`
+          : `<span class="lst pre">${new Date(e.date).toLocaleTimeString([], {hour:"numeric",minute:"2-digit"})}</span>`;
+        const sc = e.state==="pre" ? `<span class="lsc" style="color:var(--muted2)">v</span>` : `<span class="lsc">${escapeHtml(e.hs)}–${escapeHtml(e.as)}</span>`;
+        return `<div class="lcard"><span class="lt">${lflag(e.h)}${escapeHtml(e.h)}</span>${sc}<span class="lt">${escapeHtml(e.a)}${lflag(e.a)}</span>${badge}</div>`;
+      }).join("")}</div>
+      <button class="lref" id="liveRefresh" title="Refresh scores" aria-label="Refresh live scores">↻</button>`;
+    document.getElementById("liveRefresh").onclick = () => loadLiveScores();
+    if(live) liveTimer = setTimeout(loadLiveScores, 60000);              // poll every 60s while a game is live
+    else if(evs.some(e=>e.state==="pre")) liveTimer = setTimeout(loadLiveScores, 300000);  // catch kickoffs
+  }catch(e){ /* keep whatever's shown */ }
+}
+
 /* init */
 (function init(){
   const sel=document.getElementById("edition");
@@ -1125,7 +1182,8 @@ function wireMatchExplorer(){
     ["openfootball/worldcup.json","https://github.com/openfootball/worldcup.json","CC0 · public domain","Every men's World Cup 1930–2026: matches, scores (incl. extra time &amp; penalties), every goal (scorer, minute, penalty / own-goal), groups, stadiums and 2026 squads. Powers the Tournament &amp; All-Time pages and the live 2026 results that condition the forecast."],
     ["martj42/international_results","https://github.com/martj42/international_results","CC0 · public domain","~49,000 international results since 1872. We use it to compute World-Football Elo and recent form for all 48 nations."],
     ["World-Football Elo (computed)","https://eloratings.net/","derived here","Not downloaded — recomputed from scratch by tools/build_wc2026_dataset.py over the full results history. This is the engine behind the 2026 forecast."],
-    ["the-odds-api.com (betting market)","https://the-odds-api.com/","optional","When an API key is supplied, we pull the de-vigged WC2026 <b>outright-winner</b> and <b>match</b> markets and use them in the forecast (see the maths below). The market prices in injuries, form and squad changes that Elo can't. The raw odds are downloadable via Export → Market odds. <b>Odds via the-odds-api.com.</b>"]];
+    ["the-odds-api.com (betting market)","https://the-odds-api.com/","optional","When an API key is supplied, we pull the de-vigged WC2026 <b>outright-winner</b> and <b>match</b> markets and use them in the forecast (see the maths below). The market prices in injuries, form and squad changes that Elo can't. The raw odds are downloadable via Export → Market odds. <b>Odds via the-odds-api.com.</b>"],
+    ["ESPN public scoreboard","https://www.espn.com/soccer/","live · free","Powers the <b>live-scores ribbon</b> at the top — in-play scores and kick-off times, fetched directly in your browser and auto-refreshed while games are live. Free, no key, and entirely separate from the odds quota."]];
   document.getElementById("dataSources").innerHTML=sources.map(([n,u,tag,d])=>`<div style="margin-bottom:9px"><b><a href="${u}" target="_blank" rel="noopener">${n}</a></b> <span class="tag">${tag}</span><br><span style="color:var(--muted)">${d}</span></div>`).join("");
 
   /* ---------- CSV export ---------- */
@@ -1192,6 +1250,7 @@ function wireMatchExplorer(){
   });
 
   render();
+  loadLiveScores();          // live match scores on load (auto-polls while games are live)
 })();
 </script>
 </body>
