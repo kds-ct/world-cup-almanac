@@ -15,7 +15,7 @@ WHAT IT DOES (all from free, legal, public sources — no API keys, no paid tier
 Run:  python3 tools/build_wc2026_dataset.py
 Outputs land in ./wc2026-data/
 """
-import csv, io, json, math, os, random, ssl, sys, urllib.request
+import csv, datetime, io, json, math, os, random, ssl, sys, urllib.request
 from collections import defaultdict
 
 def _ssl_context():
@@ -86,6 +86,7 @@ rows.sort(key=lambda r: r["date"])
 
 elo = defaultdict(lambda: 1500.0)
 elo_pre = None                       # snapshot of ratings as of WINDOW_END (pre-tournament)
+form_hist = defaultdict(list)        # canonical team -> [(date, W/D/L, goal_diff)] chronological
 match_log = []   # window matches with pre-match ratings captured
 for r in rows:
     if elo_pre is None and r["date"] > WINDOW_END:
@@ -104,6 +105,10 @@ for r in rows:
     delta = K * G * (w_h - we_h)
     if WINDOW_START <= r["date"] <= WINDOW_END and (canon(h) in UNIVERSE or canon(a) in UNIVERSE):
         match_log.append({"r": r, "rh": rh, "ra": ra, "we_h": we_h, "neutral": neutral})
+    for tm, gf, ga in ((h, hs, as_), (a, as_, hs)):     # recent-form history (chronological)
+        cn = canon(tm)
+        if cn in QUALIFIED:
+            form_hist[cn].append((r["date"], "W" if gf > ga else "D" if gf == ga else "L", gf - ga))
     elo[h] = rh + delta
     elo[a] = ra - delta
 
@@ -206,7 +211,12 @@ GROUPS = defaultdict(list)
 for n, meta in QUALIFIED.items():
     GROUPS[meta["group"]].append(n)
 HOSTS = {"USA", "Canada", "Mexico"}
-HOST_BUMP = 50.0  # modest home advantage applied to hosts in all matches (documented assumption)
+HOST_BUMP = 50.0  # modest home advantage for hosts (deliberately < the +100 of a true home match,
+                  # since most host games are not in that host's own stadium)
+# Log-linear goal model: each side's expected goals scales with the Elo gap, so mismatches produce
+# MORE total goals (and real blowouts) instead of a fixed 2.65 total. GOAL_BASE = goals/side in an
+# even game; GOAL_GAMMA tunes how fast supremacy grows (kept gentle so win-odds still track Elo).
+GOAL_BASE, GOAL_GAMMA = 1.32, 0.23
 
 def pois(lam):
     L = math.exp(-lam); k = 0; p = 1.0
@@ -216,10 +226,8 @@ def pois(lam):
 
 def sim_goals(ta, tb, ra, rb):
     dr = (ra + (HOST_BUMP if ta in HOSTS else 0)) - (rb + (HOST_BUMP if tb in HOSTS else 0))
-    we = expected(dr)
-    sup = (we - 0.5) * 2 * 1.45            # expected goal supremacy from win expectancy
-    base = 2.65
-    la = max(0.18, base/2 + sup/2); lb = max(0.18, base/2 - sup/2)
+    la = max(0.05, GOAL_BASE * 10 ** (GOAL_GAMMA * dr / 400))
+    lb = max(0.05, GOAL_BASE * 10 ** (-GOAL_GAMMA * dr / 400))
     return pois(la), pois(lb)
 
 def ko_winner(ta, tb, ra, rb):
@@ -250,7 +258,8 @@ def assign_thirds(qualified_groups, slots):
     def bt(i, remaining):
         if i == len(order): return True
         m = order[i]; allowed = R32[m][1][1]
-        for g in list(remaining):
+        cands = list(remaining); random.shuffle(cands)   # random valid matching (de-biases vs 'first feasible')
+        for g in cands:
             if g in allowed:
                 result[m] = g; remaining.remove(g)
                 if bt(i+1, remaining): return True
@@ -270,6 +279,14 @@ def _played(m):
 grp_matches = [m for m in LIVE["matches"] if str(m.get("group","")).startswith("Group")]
 played_g = sorted((m for m in grp_matches if _played(m)), key=lambda x: x["date"])
 AS_OF = max((m["date"] for m in played_g), default=WINDOW_END)
+
+# recent form: each team's last 5 internationals on/before AS_OF (W/D/L, points out of 15, goal diff)
+FORM = {}
+for n in QUALIFIED:
+    recent = [x for x in form_hist[n] if x[0] <= AS_OF][-5:]
+    FORM[n] = {"fm": "".join(x[1] for x in recent),
+               "fp": sum(3 if r == "W" else 1 if r == "D" else 0 for _, r, _ in recent),
+               "fgd": sum(gd for _, _, gd in recent)}
 
 live_elo = {n: final_elo[n] for n in QUALIFIED}
 for m in played_g:                       # move ratings with the results already in
@@ -304,21 +321,19 @@ def _ko_win(m):
     base = s.get("et") or s.get("ft")
     if base and base[0] is not None and base[0] != base[1]: return m["team1"] if base[0] > base[1] else m["team2"]
     return None
-_ko_lists = defaultdict(list)
-for m in LIVE["matches"]:
-    if m.get("round") in ("Round of 32", "Round of 16", "Quarter-final", "Semi-final", "Final"):
-        _ko_lists[m["round"]].append(m)
-koWin = {}   # match number -> (winner, teamA, teamB)
-for rname, base in [("Round of 32", 73), ("Round of 16", 89), ("Quarter-final", 97), ("Semi-final", 101)]:
-    for i, m in enumerate(_ko_lists.get(rname, [])):
-        a, b = m["team1"], m["team2"]
-        if _is_ph(a) or _is_ph(b): continue
-        w = _ko_win(m)
-        if w: koWin[base + i] = (w, a, b)
+koWin = {}   # openfootball match number (== bracket position) -> (winner, teamA, teamB)
 finalWin = None
-if _ko_lists.get("Final"):
-    m = _ko_lists["Final"][0]; a, b = m["team1"], m["team2"]
-    if not (_is_ph(a) or _is_ph(b)) and _ko_win(m): finalWin = (_ko_win(m), a, b)
+for m in LIVE["matches"]:
+    r = m.get("round")
+    if r not in ("Round of 32", "Round of 16", "Quarter-final", "Semi-final", "Final"): continue
+    a, b = m["team1"], m["team2"]
+    if _is_ph(a) or _is_ph(b): continue
+    w = _ko_win(m)
+    if not w: continue
+    if r == "Final": finalWin = (w, a, b)
+    else: koWin[m["num"]] = (w, a, b)   # key by the match's own num, not enumeration order
+TOTAL_PLAYED = sum(1 for m in LIVE["matches"] if _played(m))
+TOTAL_MATCHES = len(LIVE["matches"])
 
 N = 30000
 reach = {n: defaultdict(int) for n in QUALIFIED}   # stage -> count
@@ -385,6 +400,7 @@ for n, meta in QUALIFIED.items():
         "elo_pre": round(final_elo[n], 0),
         "host": n in HOSTS,
         "pl": cur[n][0], "pts": cur[n][1], "gd": cur[n][2]-cur[n][3],
+        "form": FORM[n]["fm"], "form_pts": FORM[n]["fp"], "form_gd": FORM[n]["fgd"],
         "p_win_group": round(win_group[n]/N, 4),
         "p_knockout": round(reach[n]["knockout"]/N, 4),
         "p_r16": round(reach[n]["r16"]/N, 4),
@@ -395,10 +411,24 @@ for n, meta in QUALIFIED.items():
     })
 power.sort(key=lambda x: -x["p_title"])
 avg_q = sum(reach[n]["knockout"] for n in QUALIFIED)/N
+
+# ---- DATA confidence (0-100): how solid the INPUTS are ----
+#   C coverage : all model-relevant columns (date, competition, home/away, goals, neutral, venue) are filled -> 100
+#   R recency  : penalise stale data (~ -1 point per 3 days since the last result), floored at 40
+#   S source   : friendlies carry little team-strength signal; discount by half the friendly share
+days_stale = (datetime.date.today() - datetime.date.fromisoformat(AS_OF)).days
+C = 100
+R = max(40, min(100, 100 - days_stale / 3))
+friendly_share = comp_counts.get("Friendly", 0) / max(1, n_rows)
+S = 100 * (1 - friendly_share * 0.5)
+DATA_CONF = round(0.45 * C + 0.20 * R + 0.35 * S)
+CONF = {"data": DATA_CONF, "C": C, "R": round(R), "S": round(S), "fs": round(friendly_share * 100)}
+
 with open(os.path.join(OUT, "wc2026_power.json"), "w") as f:
     json.dump({"n_sims": N, "host_bump_elo": HOST_BUMP, "mode": "live",
                "as_of": AS_OF, "group_matches_played": len(played_g),
                "group_matches_total": len(grp_matches), "avg_qualifiers_per_sim": round(avg_q, 2),
+               "matches_played": TOTAL_PLAYED, "matches_total": TOTAL_MATCHES, "confidence": CONF,
                "teams": power}, f, indent=1, ensure_ascii=False)
 
 # ----------------------------------------------------------------------------- refresh dashboard embed
@@ -406,14 +436,17 @@ with open(os.path.join(OUT, "wc2026_power.json"), "w") as f:
 import re
 INDEX = os.path.join(os.path.dirname(HERE), "index.html")
 if os.path.exists(INDEX):
-    rows_js = [("{{t:{t},c:{c},g:{g},e:{e},e0:{e0},h:{h},pl:{pl},pts:{pts},gd:{gd},"
+    rows_js = [("{{t:{t},c:{c},g:{g},e:{e},e0:{e0},h:{h},pl:{pl},pts:{pts},gd:{gd},fm:{fm},fp:{fp},fgd:{fgd},"
                 "wg:{wg:.3f},ko:{ko:.3f},qf:{qf:.3f},sf:{sf:.3f},fn:{fn:.3f},ti:{ti:.4f}}}").format(
                 t=json.dumps(t["team"], ensure_ascii=False), c=json.dumps(t["confederation"]),
                 g=json.dumps(t["group"]), e=int(t["elo"]), e0=int(t["elo_pre"]), h=1 if t["host"] else 0,
-                pl=t["pl"], pts=t["pts"], gd=t["gd"], wg=t["p_win_group"], ko=t["p_knockout"],
+                pl=t["pl"], pts=t["pts"], gd=t["gd"], fm=json.dumps(t["form"]), fp=t["form_pts"], fgd=t["form_gd"],
+                wg=t["p_win_group"], ko=t["p_knockout"],
                 qf=t["p_quarter"], sf=t["p_semi"], fn=t["p_final"], ti=t["p_title"]) for t in power]
-    const = ("const WC2026={{sims:{s},he:{he},asOf:{a},played:{p},total:{tot},teams:[\n{rows}\n]}};".format(
+    const = ("const WC2026={{sims:{s},he:{he},asOf:{a},played:{p},total:{tot},playedAll:{pa},totalAll:{ta},"
+             "conf:{{data:{cd},C:{C},R:{Rr},S:{Sr},fs:{fs}}},teams:[\n{rows}\n]}};".format(
         s=N, he=int(HOST_BUMP), a=json.dumps(AS_OF), p=len(played_g), tot=len(grp_matches),
+        pa=TOTAL_PLAYED, ta=TOTAL_MATCHES, cd=CONF["data"], C=CONF["C"], Rr=CONF["R"], Sr=CONF["S"], fs=CONF["fs"],
         rows=",\n".join(rows_js)))
     html = open(INDEX, encoding="utf-8").read()
     html2, nrep = re.subn(r"const WC2026=\{sims:.*?\n\]\};", const, html, count=1, flags=re.DOTALL)
