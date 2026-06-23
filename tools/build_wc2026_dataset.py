@@ -336,8 +336,8 @@ def pois(lam):
 
 def sim_goals(ta, tb, ra, rb):
     dr = (ra + (HOST_BUMP if ta in HOSTS else 0)) - (rb + (HOST_BUMP if tb in HOSTS else 0))
-    la = max(0.05, GOAL_BASE * 10 ** (GOAL_GAMMA * dr / 400))
-    lb = max(0.05, GOAL_BASE * 10 ** (-GOAL_GAMMA * dr / 400))
+    la = min(6.0, max(0.05, GOAL_BASE * 10 ** (GOAL_GAMMA * dr / 400)))
+    lb = min(6.0, max(0.05, GOAL_BASE * 10 ** (-GOAL_GAMMA * dr / 400)))
     return pois(la), pois(lb)
 
 def ko_winner(ta, tb, ra, rb):

@@ -4,6 +4,9 @@ An interactive FIFA World Cup data almanac (every men's tournament, **1930 → 2
 near-zero-cost pipeline that computes World-Football Elo from scratch, optionally blends in the
 betting market, and runs a **live** Monte-Carlo forecast of World Cup 2026 with confidence scores.
 
+> 🎓 **New to this / explaining it to someone?** Read [`HOW-IT-WORKS.md`](HOW-IT-WORKS.md) — a plain-English,
+> student-friendly walkthrough of the whole model (Elo, Monte-Carlo, the market blend, cards, confidence).
+
 Two pieces, one repo, no build step:
 
 | Part | File | What it does |
@@ -21,6 +24,9 @@ Two pieces, one repo, no build step:
 - **Tournament** (pick any edition 1930–2026) — group standings, the Golden Boot, when-goals-are-scored
   and goals-by-stage charts, confederation breakdown, the full **knockout bracket** (extra time &
   penalties resolved), a searchable **match explorer** with goal-by-goal detail, and penalties / own goals.
+- **Discipline** (2026) — yellow/red totals and cards-per-game, a most-booked **card ranking** per player,
+  and a **suspension watch** (who's banned, who's one booking away) from the live card feed. A banned
+  player also nudges their team's rating down in the forecast for their next game (more if they've scored).
 - **All-Time** — roll of honour, goals-per-match trend across every edition, top-scoring nations,
   most appearances, all-time leading scorers, and all-time penalties / own goals.
 - **2026 Forecast** — a live, **market-informed** Monte-Carlo: title odds (with the market's number
@@ -161,6 +167,7 @@ world-cup-almanac/
 │   ├── wc2026_odds.csv              # collected market odds (only if built with a key)
 │   └── adjustments.example.json     # template for manual strength overrides
 ├── requirements.txt                 # (none required; certifi optional)
+├── HOW-IT-WORKS.md                  # student-friendly explainer of the whole model
 ├── LICENSE
 └── README.md
 ```

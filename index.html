@@ -413,11 +413,15 @@ function espnIndex(events, finalsOnly){
     if(st!=="post" && (finalsOnly || st!=="in")) continue;
     const c = ev.competitions?.[0]; if(!c) continue; const cs = c.competitors||[];
     const byId={}, score={}; cs.forEach(x=>{const nm=norm(x.team.displayName); byId[x.id]=nm; score[nm]=parseInt(x.score,10);});
-    const goals = [];
-    for(const p of (c.details||[])){ if(!p.scoringPlay || p.shootout) continue;
-      goals.push({team:byId[p.team?.id], name:(p.athletesInvolved||[{}])[0]?.displayName||"", min:p.clock?.displayValue||"", pen:!!p.penaltyKick, own:!!p.ownGoal}); }
+    const goals = [], cards = [];
+    for(const p of (c.details||[])){
+      if(p.scoringPlay && !p.shootout)
+        goals.push({team:byId[p.team?.id], name:(p.athletesInvolved||[{}])[0]?.displayName||"", min:p.clock?.displayValue||"", pen:!!p.penaltyKick, own:!!p.ownGoal});
+      else if(p.yellowCard || p.redCard)
+        cards.push({team:byId[p.team?.id], name:(p.athletesInvolved||[{}])[0]?.displayName||"", min:p.clock?.displayValue||"", type:p.redCard?"R":"Y"});
+    }
     const names = cs.map(x=>norm(x.team.displayName));
-    if(names.length===2) idx.set([names[0],names[1]].sort().join("|"), {score, goals, state:st});
+    if(names.length===2) idx.set([names[0],names[1]].sort().join("|"), {score, goals, cards, state:st});
   }
   return idx;
 }
@@ -430,7 +434,8 @@ async function mergeEspnLive(matches, finalsOnly){
     const s1 = e.score[m.team1], s2 = e.score[m.team2];
     if(!Number.isFinite(s1) || !Number.isFinite(s2)) return m;
     const mk = tm => e.goals.filter(g=>g.team===tm).map(g=>({name:g.name, minute:g.min, penalty:g.pen, owngoal:g.own}));
-    return {...m, score:{...(m.score||{}), ft:[s1,s2]}, goals1:mk(m.team1), goals2:mk(m.team2), _live:true};
+    const mc = tm => (e.cards||[]).filter(c=>c.team===tm).map(c=>({name:c.name, minute:c.min, type:c.type}));
+    return {...m, score:{...(m.score||{}), ft:[s1,s2]}, goals1:mk(m.team1), goals2:mk(m.team2), cards1:mc(m.team1), cards2:mc(m.team2), _live:true};
   });
 }
 
@@ -520,6 +525,23 @@ function goalEvents(matches){
   for(const mt of matches) for(const side of ["goals1","goals2"]) for(const g of (mt[side]||[]))
     ev.push({min:minuteBase(g.minute), pen:!!g.penalty, og:!!g.owngoal});
   return ev;
+}
+/* discipline (cards) from the live ESPN overlay — yellows/reds, per-player tallies, and an
+   estimated suspension watch (a red, or 2 yellows, = a one-match ban under FIFA's rules). */
+function cardData(matches){
+  const played = matches.filter(m=>m._live && hasScore(m) && (m.cards1||m.cards2));
+  let Y=0, R=0; const pl={};
+  for(const m of played) for(const [arr,team] of [[m.cards1,m.team1],[m.cards2,m.team2]]) for(const c of (arr||[])){
+    const e = pl[team+"|"+c.name] ||= {name:c.name, team, Y:0, R:0};
+    if(c.type==="R"){ R++; e.R++; } else { Y++; e.Y++; }
+  }
+  const players = Object.values(pl);
+  return {
+    Y, R, games: played.length,
+    ranking: players.slice().sort((a,b)=>(b.R*3+b.Y)-(a.R*3+a.Y) || b.R-a.R || a.name.localeCompare(b.name)),
+    banned: players.filter(p=>p.R>0 || p.Y>=2),          // estimated one-match ban
+    atRisk: players.filter(p=>p.R===0 && p.Y===1),        // one booking from a ban
+  };
 }
 function goalsByInterval(matches){
   const buckets=[["1–15",0],["16–30",0],["31–45",0],["46–60",0],["61–75",0],["76–90",0],["90+/ET",0]];
@@ -699,6 +721,30 @@ function tournamentHTML(d){
       html+=`</div>`;
     }
     html+=`</div></section>`;
+  }
+
+  /* Discipline (cards) — only when we have live card data (2026) */
+  const cd=cardData(d.matches);
+  if(cd.games>0){
+    const cardChip=(n,col)=>n?`<span style="display:inline-flex;gap:2px;align-items:center"><span style="width:9px;height:13px;border-radius:2px;background:${col};display:inline-block"></span>${n}</span>`:``;
+    html+=`<section class="panel col-7 reveal"><div class="phead"><h2>Discipline</h2><span class="meta">${cd.Y} yellow · ${cd.R} red · ${(((cd.Y+cd.R)/cd.games)||0).toFixed(1)} cards/game</span></div>
+      <div class="bars">`;
+    const maxC=Math.max(1,...cd.ranking.slice(0,12).map(p=>p.R*3+p.Y));
+    cd.ranking.slice(0,12).forEach(p=>{ const score=p.R*3+p.Y;
+      html+=`<div class="bar"><div class="who">${flag(p.team,"flag sm")}<span class="nm">${escapeHtml(p.name)}</span></div>
+        <div class="track" style="background:transparent;display:flex;align-items:center;gap:6px;height:auto">${cardChip(p.Y,"#e3c84a")}${cardChip(p.R,"#e8553c")}</div>
+        <div class="num" style="font-size:14px">${score}</div></div>`; });
+    html+=`</div></section>`;
+    /* Suspension watch */
+    html+=`<section class="panel col-5 reveal"><div class="phead"><h2>Suspension Watch</h2><span class="meta">est. one-match bans</span></div>
+      <p class="note" style="margin:-4px 0 12px;font-size:11.5px">A <b style="color:var(--red)">red</b> or a <b style="color:#e3c84a">second yellow</b> = a one-match ban (FIFA wipes yellows after the quarter-finals). This is fed into the forecast: a banned player nudges their team's rating down for the next game, more so if they've been scoring.</p>`;
+    if(cd.banned.length){ html+=`<div style="margin-bottom:10px"><div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--red);margin-bottom:6px">Banned next match</div>`;
+      cd.banned.slice(0,10).forEach(p=>html+=`<div style="display:flex;align-items:center;gap:8px;font-size:12.5px;padding:3px 0">${flag(p.team,"flag sm")}<span style="font-weight:600">${escapeHtml(p.name)}</span><span style="color:var(--muted2);font-size:10px;margin-left:auto">${p.R?`${p.R} red`:`${p.Y} yellows`}</span></div>`);
+      html+=`</div>`; }
+    if(cd.atRisk.length){ html+=`<div><div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#e3c84a;margin-bottom:6px">One booking away</div>
+      <div style="font-size:12px;color:var(--muted);line-height:1.7">${cd.atRisk.slice(0,16).map(p=>escapeHtml(p.name)).join(" · ")}</div></div>`; }
+    if(!cd.banned.length && !cd.atRisk.length) html+=`<p class="note">No suspensions on the board yet.</p>`;
+    html+=`</section>`;
   }
 
   /* Match explorer */
@@ -1021,9 +1067,19 @@ async function recomputeForecast(N, onProgress){
     if(!["Round of 32","Round of 16","Quarter-final","Semi-final","Final"].includes(r))continue;
     const a=m.team1,b=m.team2; if(isPh(a)||isPh(b))continue; const w=koOf(m); if(!w)continue;
     if(r==="Final")finalWin=[w,a,b]; else koWin[m.num]=[w,a,b]; }
+  // estimated card suspensions -> a banned player weakens their team's NEXT (remaining group) game,
+  // weighted by how many goals they've scored (a proxy for how key they are).
+  const susp={};
+  { const goalsBy={}, cardBy={};
+    for(const m of LIVE.matches){ if(!isPlayed(m)) continue;
+      for(const side of ["goals1","goals2"]) for(const g of (m[side]||[])){ if(!g.owngoal) goalsBy[g.name]=(goalsBy[g.name]||0)+1; }
+      for(const [arr,team] of [[m.cards1,m.team1],[m.cards2,m.team2]]) for(const c of (arr||[])){
+        const e = cardBy[team+"|"+c.name] ||= {team, name:c.name, Y:0, R:0}; if(c.type==="R")e.R++; else e.Y++; } }
+    for(const k in cardBy){ const p=cardBy[k];
+      if(p.R>0 || p.Y>=2) susp[p.team] = Math.min(30, (susp[p.team]||0) + Math.min(22, 6 + 6*Math.min(goalsBy[p.name]||0, 3))); } }
   const pois=lam=>{const L=Math.exp(-lam);let k=0,p=1;do{k++;p*=Math.random();}while(p>L);return k-1;};
-  const simGoals=(ta,tb)=>{const dr=(liveElo[ta]+(HOSTS.has(ta)?HOST_BUMP:0))-(liveElo[tb]+(HOSTS.has(tb)?HOST_BUMP:0));
-    return [pois(Math.max(0.05,GOAL_BASE*Math.pow(10,GOAL_GAMMA*dr/400))),pois(Math.max(0.05,GOAL_BASE*Math.pow(10,-GOAL_GAMMA*dr/400)))];};
+  const simGoals=(ta,tb)=>{const dr=((liveElo[ta]-(susp[ta]||0))+(HOSTS.has(ta)?HOST_BUMP:0))-((liveElo[tb]-(susp[tb]||0))+(HOSTS.has(tb)?HOST_BUMP:0));
+    return [pois(Math.min(6,Math.max(0.05,GOAL_BASE*Math.pow(10,GOAL_GAMMA*dr/400)))),pois(Math.min(6,Math.max(0.05,GOAL_BASE*Math.pow(10,-GOAL_GAMMA*dr/400))))];};
   const koW=(ta,tb)=>{const dr=(liveElo[ta]+(HOSTS.has(ta)?HOST_BUMP:0))-(liveElo[tb]+(HOSTS.has(tb)?HOST_BUMP:0));return Math.random()<eExp(dr)?ta:tb;};
   const lock=(m,ta,tb)=> koWin[m] && ((ta===koWin[m][1]&&tb===koWin[m][2])||(ta===koWin[m][2]&&tb===koWin[m][1])) ? koWin[m][0] : null;
   const reach={}, winGroup={}; TEAMS.forEach(t=>{reach[t.name]={knockout:0,r16:0,quarter:0,semi:0,final:0,title:0};winGroup[t.name]=0;});
@@ -1051,7 +1107,7 @@ async function recomputeForecast(N, onProgress){
     let champ; if(finalWin && ((fA===finalWin[1]&&fB===finalWin[2])||(fA===finalWin[2]&&fB===finalWin[1]))) champ=finalWin[0]; else champ=koW(fA,fB);
     reach[champ].title++;
   }
-  const CHUNK=1000;
+  const CHUNK=5000;
   for(let done=0; done<N; done+=CHUNK){ const end=Math.min(done+CHUNK,N);
     for(let s=done;s<end;s++) one();
     if(onProgress)onProgress(end/N);
