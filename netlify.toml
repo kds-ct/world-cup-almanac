@@ -1,0 +1,6 @@
+# World Cup Almanac — static site, no build step.
+# index.html lives at the repo root and loads its data client-side (jsDelivr CDN),
+# so Netlify only needs to publish the repository root as-is.
+[build]
+  publish = "."
+  command = ""
