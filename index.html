@@ -390,8 +390,48 @@ async function fetchEdition(year){
     fetch(`${CDN}/${year}/worldcup.stadiums.json`).then(r=>r.ok?r.json():null)
   ]);
   const teams = extra[0].status==="fulfilled"?extra[0].value:null;
-  const data = {year, name:main.name, matches:main.matches||[], teams:teams};
+  let matches = main.matches||[];
+  if(year===2026) matches = await mergeEspnLive(matches, false);   // overlay live ESPN scores + goals
+  const data = {year, name:main.name, matches, teams:teams};
   cache[year]=data; return data;
+}
+
+/* ---- live 2026 overlay: merge ESPN results + goal detail onto the openfootball fixture skeleton.
+   finalsOnly=true keeps only finished games (for the forecast); false also folds in in-progress
+   scores (for the live standings/Golden Boot/etc.). ESPN provides everything in one cheap, key-free,
+   CORS-enabled fetch — no odds quota touched. Falls back to openfootball if ESPN is unavailable. ---- */
+const ESPN_RANGE = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=20260611-20260719&limit=300";
+let _espnEventsP = null;
+function getEspnEvents(force){
+  if(force) _espnEventsP = null;
+  if(!_espnEventsP) _espnEventsP = fetch(ESPN_RANGE,{cache:"no-store"}).then(r=>r.ok?r.json():{events:[]}).then(d=>d.events||[]).catch(()=>[]);
+  return _espnEventsP;
+}
+function espnIndex(events, finalsOnly){
+  const norm = n => ESPN_ALIAS[n] || n, idx = new Map();
+  for(const ev of events){ const st = ev.status?.type?.state;
+    if(st!=="post" && (finalsOnly || st!=="in")) continue;
+    const c = ev.competitions?.[0]; if(!c) continue; const cs = c.competitors||[];
+    const byId={}, score={}; cs.forEach(x=>{const nm=norm(x.team.displayName); byId[x.id]=nm; score[nm]=parseInt(x.score,10);});
+    const goals = [];
+    for(const p of (c.details||[])){ if(!p.scoringPlay || p.shootout) continue;
+      goals.push({team:byId[p.team?.id], name:(p.athletesInvolved||[{}])[0]?.displayName||"", min:p.clock?.displayValue||"", pen:!!p.penaltyKick, own:!!p.ownGoal}); }
+    const names = cs.map(x=>norm(x.team.displayName));
+    if(names.length===2) idx.set([names[0],names[1]].sort().join("|"), {score, goals, state:st});
+  }
+  return idx;
+}
+async function mergeEspnLive(matches, finalsOnly){
+  let idx; try{ idx = espnIndex(await getEspnEvents(), finalsOnly); }catch(e){ return matches; }
+  if(!idx.size) return matches;
+  return matches.map(m=>{
+    if(isPlaceholder(m.team1) || isPlaceholder(m.team2)) return m;
+    const e = idx.get([m.team1,m.team2].sort().join("|")); if(!e) return m;
+    const s1 = e.score[m.team1], s2 = e.score[m.team2];
+    if(!Number.isFinite(s1) || !Number.isFinite(s2)) return m;
+    const mk = tm => e.goals.filter(g=>g.team===tm).map(g=>({name:g.name, minute:g.min, penalty:g.pen, owngoal:g.own}));
+    return {...m, score:{...(m.score||{}), ft:[s1,s2]}, goals1:mk(m.team1), goals2:mk(m.team2), _live:true};
+  });
 }
 
 /* ============================== HELPERS ============================== */
@@ -956,6 +996,7 @@ async function recomputeForecast(N, onProgress){
   const GROUPS={}; TEAMS.forEach(t=>{(GROUPS[t.group]=GROUPS[t.group]||[]).push(t.name);});
   const liveElo={}; TEAMS.forEach(t=>liveElo[t.name]=t.e0);
   const LIVE=await fetch(OF_2026,{cache:"no-store"}).then(r=>r.json());
+  LIVE.matches=await mergeEspnLive(LIVE.matches||[], true);   // condition the forecast on ESPN finals (fresher than openfootball)
   const isPlayed=m=>{const s=m.score;return !!(s&&s.ft&&s.ft.length===2&&s.ft[0]!=null);};
   const grp=LIVE.matches.filter(m=>String(m.group||"").startsWith("Group"));
   const playedG=grp.filter(isPlayed).slice().sort((a,b)=>(a.date||"").localeCompare(b.date||""));
@@ -1129,8 +1170,14 @@ function wireMatchExplorer(){
 
 /* ============================== LIVE SCORES (ESPN public feed — free, no key, no odds quota) ============================== */
 const ESPN_SB = "https://site.api.espn.com/apis/site/v2/sports/soccer/fifa.world/scoreboard?dates=";
-const ESPN_ALIAS = {"Congo DR":"DR Congo","Korea Republic":"South Korea","IR Iran":"Iran","Côte d'Ivoire":"Ivory Coast","United States":"USA","Czechia":"Czech Republic","Türkiye":"Turkey","Cabo Verde":"Cape Verde"};
-let liveTimer = null;
+const ESPN_ALIAS = {"Congo DR":"DR Congo","Korea Republic":"South Korea","IR Iran":"Iran","Côte d'Ivoire":"Ivory Coast","United States":"USA","Czechia":"Czech Republic","Türkiye":"Turkey","Cabo Verde":"Cape Verde","Bosnia and Herzegovina":"Bosnia & Herzegovina"};
+let liveTimer = null, _allSig = null, _finSig = null;
+/* when ESPN results change, refresh the live 2026 data and the view that's showing */
+function onLiveResultsChanged(allChanged, finalsChanged){
+  if(allChanged){ delete cache[2026]; getEspnEvents(true); }
+  if(allChanged && state.view==="tournament" && state.year===2026) render();        // live standings / golden boot / etc.
+  if(finalsChanged && state.view==="forecast"){ const b=document.getElementById("fcRefresh"); if(b && !b.disabled) b.click(); }  // re-run forecast on a new final
+}
 const lflag = name => flag(ESPN_ALIAS[name] || name, "lflag");
 async function loadLiveScores(){
   const bar = document.getElementById("liveBar"); if(!bar) return;
@@ -1147,6 +1194,10 @@ async function loadLiveScores(){
       const st=ev.status.type;
       return {id:ev.id, date:ev.date, h:h.team.displayName, a:a.team.displayName, hs:h.score, as:a.score, state:st.state, detail:st.shortDetail};
     }).sort((x,y)=> (y.state==="in")-(x.state==="in") || new Date(x.date)-new Date(y.date));
+    const allSig = evs.map(e=>e.id+":"+e.hs+"-"+e.as+":"+e.state).sort().join(",");
+    const finSig = evs.filter(e=>e.state==="post").map(e=>e.id+":"+e.hs+"-"+e.as).sort().join(",");
+    if(_allSig!==null && (allSig!==_allSig || finSig!==_finSig)) onLiveResultsChanged(allSig!==_allSig, finSig!==_finSig);
+    _allSig = allSig; _finSig = finSig;
     if(liveTimer){ clearTimeout(liveTimer); liveTimer=null; }
     if(!evs.length){ bar.className="livebar empty"; bar.innerHTML=""; return; }
     const live = evs.filter(e=>e.state==="in").length;

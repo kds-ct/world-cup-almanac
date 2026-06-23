@@ -15,7 +15,9 @@ Two pieces, one repo, no build step:
 
 - **Live scores ribbon** (top of every view) — in-play scores and kick-off times from ESPN's public
   scoreboard, fetched in the browser on load and auto-refreshed while games are live. Free, no key,
-  and **separate from the odds quota**.
+  and **separate from the odds quota**. The same ESPN feed (results + goal detail) is overlaid onto
+  the 2026 data, so the **whole 2026 Tournament view** (standings, Golden Boot, goal-timing, goals-by-stage,
+  bracket) **and the forecast update live** — and auto-refresh the moment a result changes.
 - **Tournament** (pick any edition 1930–2026) — group standings, the Golden Boot, when-goals-are-scored
   and goals-by-stage charts, confederation breakdown, the full **knockout bracket** (extra time &
   penalties resolved), a searchable **match explorer** with goal-by-goal detail, and penalties / own goals.
@@ -55,8 +57,9 @@ Standard library only — no `pip install`. (If your Python lacks root CA certif
    `λ = base · 10^(±γ·d/400)`, with `base` and `γ` **maximum-likelihood-fit** to recent competitive
    scorelines (no new data). Mismatches produce more goals and real blowouts. Knockout winners come
    straight from the Elo win-probability.
-3. **Live conditioning** — actual 2026 results are **locked in** (group and knockout); only unplayed
-   fixtures are simulated. Every panel reads from this one simulation, so they all move together.
+3. **Live conditioning** — actual 2026 results (from the live ESPN feed, fresher than the static
+   datasets) are **locked in** (group and knockout); only unplayed fixtures are simulated. Every panel
+   reads from this one simulation, so they all move together.
 4. **Betting-market blend** *(optional — see below)* — pulls each team's strength toward the de-vigged
    market, which prices in injuries, form and squad changes Elo can't see.
 5. **Monte-Carlo** — the real 2026 format (12 groups, top-2 + 8 best third-placed → official
