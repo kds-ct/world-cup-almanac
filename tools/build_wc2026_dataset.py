@@ -142,6 +142,43 @@ if os.path.exists(_adj):
     for n, d in ADJ.items(): final_elo[n] += max(-120.0, min(120.0, d))
     if ADJ: print(f"applied {len(ADJ)} manual strength overrides from adjustments.json", file=sys.stderr)
 
+# ---- optional, free, market-informed Elo blend (#1) ----
+# If ODDS_API_KEY is set in the environment, pull de-vigged WC2026 outright (title) odds and pull each
+# team's frozen Elo partway toward what the market implies. The KEY stays in the environment (never
+# committed or sent to the browser); only our Elo-derived forecast is published, not the raw odds.
+#   run with:  ODDS_API_KEY=xxxxx python3 tools/build_wc2026_dataset.py
+MARKET_BLEND = None
+ODDS_KEY = os.environ.get("ODDS_API_KEY")
+if ODDS_KEY:
+    try:
+        url = ("https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup_winner/odds/"
+               "?apiKey=" + ODDS_KEY + "&regions=eu,uk&markets=outrights&oddsFormat=decimal")
+        events = json.loads(fetch(url, raw=True), strict=False)
+        agg = defaultdict(list)
+        for ev in events:
+            for bk in ev.get("bookmakers", []):
+                for mk in bk.get("markets", []):
+                    ocs = [o for o in mk.get("outcomes", []) if o.get("price", 0) > 0]
+                    tot = sum(1.0 / o["price"] for o in ocs)
+                    if tot <= 0: continue
+                    for o in ocs: agg[o["name"].strip()].append((1.0 / o["price"]) / tot)  # de-vig
+        mkt = {n: sum(ps) / len(ps) for n, ps in agg.items() if n in QUALIFIED}   # avg P(title) across books
+        if len(mkt) >= 12:
+            xs = {t: math.log(p) for t, p in mkt.items() if p > 0}      # map market title odds -> Elo units
+            n = len(xs); mx = sum(xs.values()) / n; my = sum(final_elo[t] for t in xs) / n
+            var = sum((xs[t] - mx) ** 2 for t in xs) or 1.0
+            a = sum((xs[t] - mx) * (final_elo[t] - my) for t in xs) / var
+            b = my - a * mx
+            W = 0.5                                                     # blend weight toward the market
+            for t in xs:
+                final_elo[t] += max(-100.0, min(100.0, W * (a * xs[t] + b - final_elo[t])))
+            MARKET_BLEND = {"w": W, "teams": len(xs)}
+            print(f"market blend: pulled {len(xs)} teams' Elo {int(W*100)}% toward de-vigged title odds", file=sys.stderr)
+        else:
+            print(f"odds blend skipped: only {len(mkt)} teams matched", file=sys.stderr)
+    except Exception as e:
+        print(f"odds blend skipped ({e})", file=sys.stderr)
+
 # ----------------------------------------------------------------------------- per-team-per-match CSV
 SPEC_COLS = ["date","competition","season","stage","team","confederation","opponent","home_away",
              "goals_for","goals_against","result","shots","shots_on_target","shots_off_target",
@@ -471,7 +508,7 @@ with open(os.path.join(OUT, "wc2026_power.json"), "w") as f:
                "as_of": AS_OF, "group_matches_played": len(played_g),
                "group_matches_total": len(grp_matches), "avg_qualifiers_per_sim": round(avg_q, 2),
                "matches_played": TOTAL_PLAYED, "matches_total": TOTAL_MATCHES, "confidence": CONF,
-               "teams": power}, f, indent=1, ensure_ascii=False)
+               "market_blend": MARKET_BLEND, "teams": power}, f, indent=1, ensure_ascii=False)
 
 # ----------------------------------------------------------------------------- refresh dashboard embed
 # Keep index.html self-contained (works offline / via file://) by splicing the compact forecast in.
@@ -485,9 +522,10 @@ if os.path.exists(INDEX):
                 pl=t["pl"], pts=t["pts"], gd=t["gd"], fm=json.dumps(t["form"]), fp=t["form_pts"], fgd=t["form_gd"],
                 wg=t["p_win_group"], ko=t["p_knockout"],
                 qf=t["p_quarter"], sf=t["p_semi"], fn=t["p_final"], ti=t["p_title"]) for t in power]
-    const = ("const WC2026={{sims:{s},he:{he},gb:{gb:.3f},gg:{gg:.3f},asOf:{a},played:{p},total:{tot},playedAll:{pa},totalAll:{ta},"
+    const = ("const WC2026={{sims:{s},he:{he},gb:{gb:.3f},gg:{gg:.3f},mb:{mb},asOf:{a},played:{p},total:{tot},playedAll:{pa},totalAll:{ta},"
              "conf:{{data:{cd},C:{C},R:{Rr},S:{Sr},fs:{fs}}},teams:[\n{rows}\n]}};".format(
-        s=N, he=int(HOST_BUMP), gb=GOAL_BASE, gg=GOAL_GAMMA, a=json.dumps(AS_OF), p=len(played_g), tot=len(grp_matches),
+        s=N, he=int(HOST_BUMP), gb=GOAL_BASE, gg=GOAL_GAMMA, mb=1 if MARKET_BLEND else 0,
+        a=json.dumps(AS_OF), p=len(played_g), tot=len(grp_matches),
         pa=TOTAL_PLAYED, ta=TOTAL_MATCHES, cd=CONF["data"], C=CONF["C"], Rr=CONF["R"], Sr=CONF["S"], fs=CONF["fs"],
         rows=",\n".join(rows_js)))
     html = open(INDEX, encoding="utf-8").read()
