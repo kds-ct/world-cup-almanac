@@ -48,7 +48,22 @@ root CA certificates, `pip install certifi` and it will be picked up automatical
   fixtures and the knockout rounds are simulated.
 - **Real format**: 30,000 Monte-Carlo runs of the genuine 2026 structure — 12 groups, **32 of 48
   advance** (top 2 of each group + the 8 best third-placed), then the official Round-of-32 → Final
-  bracket. Hosts (USA/Canada/Mexico) get a modest +50 Elo home bump.
+  bracket. Hosts (USA/Canada/Mexico) get a modest +50 Elo home bump. Played knockout results are
+  locked in too, so the model stays correct as the bracket unfolds.
+
+Every panel — Title Odds, Road to the Final, Who Escapes Each Group, the KPIs — reads from this one
+simulation, so they all reflect the live results together.
+
+### Keeping it live
+
+Two independent ways to refresh after matches are played:
+
+1. **In the browser** — the 2026 Forecast tab has a **"↻ Refresh with live results"** button that
+   re-runs the full simulation client-side (≈20k runs, a couple of seconds) from the current match
+   data. No rebuild, no redeploy — anyone visiting the site can get up-to-the-minute numbers.
+2. **Rebuild the snapshot** — run `python3 tools/build_wc2026_dataset.py` and commit; this also
+   refreshes the numbers baked into `index.html` (the instant-load default) and the files in
+   `data/`. Wire it to a daily CI job if you want the default snapshot to stay fresh automatically.
 
 ### Honest caveats
 

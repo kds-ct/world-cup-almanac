@@ -296,6 +296,30 @@ for m in grp_matches:
     else:
         remaining[g].append((a, b))
 
+# played KNOCKOUT results -> lock them onto the fixed bracket match numbers (active once KO begins)
+def _is_ph(n): return (not n) or n[0].isdigit() or (len(n) > 1 and n[0] in "WL" and n[1:].isdigit()) or "/" in n
+def _ko_win(m):
+    s = m.get("score") or {}
+    if s.get("p"): return m["team1"] if s["p"][0] > s["p"][1] else m["team2"]
+    base = s.get("et") or s.get("ft")
+    if base and base[0] is not None and base[0] != base[1]: return m["team1"] if base[0] > base[1] else m["team2"]
+    return None
+_ko_lists = defaultdict(list)
+for m in LIVE["matches"]:
+    if m.get("round") in ("Round of 32", "Round of 16", "Quarter-final", "Semi-final", "Final"):
+        _ko_lists[m["round"]].append(m)
+koWin = {}   # match number -> (winner, teamA, teamB)
+for rname, base in [("Round of 32", 73), ("Round of 16", 89), ("Quarter-final", 97), ("Semi-final", 101)]:
+    for i, m in enumerate(_ko_lists.get(rname, [])):
+        a, b = m["team1"], m["team2"]
+        if _is_ph(a) or _is_ph(b): continue
+        w = _ko_win(m)
+        if w: koWin[base + i] = (w, a, b)
+finalWin = None
+if _ko_lists.get("Final"):
+    m = _ko_lists["Final"][0]; a, b = m["team1"], m["team2"]
+    if not (_is_ph(a) or _is_ph(b)) and _ko_win(m): finalWin = (_ko_win(m), a, b)
+
 N = 30000
 reach = {n: defaultdict(int) for n in QUALIFIED}   # stage -> count
 win_group = defaultdict(int)
@@ -335,16 +359,22 @@ for _ in range(N):
         a, b = R32[mnum]
         ta = pos[a] if a[0] in ("1","2") else third_team[third_assign[mnum]]
         tb = pos[b] if b[0] in ("1","2") else third_team[third_assign[mnum]]
-        w = ko_winner(ta, tb, live_elo[ta], live_elo[tb]); winners[mnum] = w
+        if mnum in koWin and {ta, tb} == {koWin[mnum][1], koWin[mnum][2]}: w = koWin[mnum][0]
+        else: w = ko_winner(ta, tb, live_elo[ta], live_elo[tb])
+        winners[mnum] = w
         reach[w]["r16"] += 1
     for mnum in range(89, 103):          # R16 -> QF -> SF
         a, b = LATER[mnum]
         ta, tb = winners[a[1]], winners[b[1]]
-        w = ko_winner(ta, tb, live_elo[ta], live_elo[tb]); winners[mnum] = w
+        if mnum in koWin and {ta, tb} == {koWin[mnum][1], koWin[mnum][2]}: w = koWin[mnum][0]
+        else: w = ko_winner(ta, tb, live_elo[ta], live_elo[tb])
+        winners[mnum] = w
         if   89 <= mnum <= 96:  reach[w]["quarter"] += 1     # R16 winners reach QF
         elif 97 <= mnum <= 100: reach[w]["semi"] += 1        # QF winners reach SF
         else:                   reach[w]["final"] += 1       # SF winners = finalists
-    champ = ko_winner(winners[101], winners[102], live_elo[winners[101]], live_elo[winners[102]])
+    fA, fB = winners[101], winners[102]
+    if finalWin and {fA, fB} == {finalWin[1], finalWin[2]}: champ = finalWin[0]
+    else: champ = ko_winner(fA, fB, live_elo[fA], live_elo[fB])
     reach[champ]["title"] += 1
 
 power = []
@@ -352,6 +382,7 @@ for n, meta in QUALIFIED.items():
     power.append({
         "team": n, "confederation": meta["confed"], "group": meta["group"], "code": meta["code"],
         "elo": round(live_elo[n], 0),
+        "elo_pre": round(final_elo[n], 0),
         "host": n in HOSTS,
         "pl": cur[n][0], "pts": cur[n][1], "gd": cur[n][2]-cur[n][3],
         "p_win_group": round(win_group[n]/N, 4),
@@ -375,10 +406,10 @@ with open(os.path.join(OUT, "wc2026_power.json"), "w") as f:
 import re
 INDEX = os.path.join(os.path.dirname(HERE), "index.html")
 if os.path.exists(INDEX):
-    rows_js = [("{{t:{t},c:{c},g:{g},e:{e},h:{h},pl:{pl},pts:{pts},gd:{gd},"
+    rows_js = [("{{t:{t},c:{c},g:{g},e:{e},e0:{e0},h:{h},pl:{pl},pts:{pts},gd:{gd},"
                 "wg:{wg:.3f},ko:{ko:.3f},qf:{qf:.3f},sf:{sf:.3f},fn:{fn:.3f},ti:{ti:.4f}}}").format(
                 t=json.dumps(t["team"], ensure_ascii=False), c=json.dumps(t["confederation"]),
-                g=json.dumps(t["group"]), e=int(t["elo"]), h=1 if t["host"] else 0,
+                g=json.dumps(t["group"]), e=int(t["elo"]), e0=int(t["elo_pre"]), h=1 if t["host"] else 0,
                 pl=t["pl"], pts=t["pts"], gd=t["gd"], wg=t["p_win_group"], ko=t["p_knockout"],
                 qf=t["p_quarter"], sf=t["p_semi"], fn=t["p_final"], ti=t["p_title"]) for t in power]
     const = ("const WC2026={{sims:{s},he:{he},asOf:{a},played:{p},total:{tot},teams:[\n{rows}\n]}};".format(
