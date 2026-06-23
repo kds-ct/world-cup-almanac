@@ -29,8 +29,10 @@ Everything is **free and public** — no expensive data, no paywalls:
 | **martj42** (a public dataset) | The result of *every* international match since **1872** (~49,000 games). |
 | **ESPN's public scoreboard** | **Live** in-play scores and goal/card detail for 2026, refreshed automatically. |
 | **the-odds-api** *(optional)* | The **betting market's** odds — what bookmakers think will happen. |
+| **FIFA World Ranking** | The **official** ranking points — used as a second opinion on team strength (see §5). |
 
-The first three are completely free. The odds need a free account key, but they're optional.
+The first three are completely free. The odds need a free account key, but they're optional. The FIFA
+points are copied by hand from FIFA's site (it freezes the ranking during the World Cup, so one copy lasts).
 
 ---
 
@@ -110,6 +112,15 @@ A pre-tournament prediction gets stale the moment games are played. So:
   **halfway toward** what the market implies. This is the "**wisdom of the crowd**" — thousands of people
   betting real money is a powerful signal. (We show the market's number next to ours so you can compare.)
 
+- **The official FIFA ranking.** Here's a neat fact: FIFA's own world ranking is built on the **same Elo
+  method** we use — just tuned a bit differently. That makes it a perfect *second opinion*. We take the
+  official points, stretch them onto our rating scale, and pull each team's strength **35% of the way
+  toward** FIFA's number — a consensus of "our Elo" and "FIFA's Elo." Two independent estimates blended
+  together are usually more accurate than either alone. (The forecast page shows the full official ranking,
+  with our Elo beside it; where they disagree — say a team we rate high but FIFA rates lower — the blend
+  splits the difference, which keeps us honest.) FIFA freezes its ranking during the World Cup, so the
+  numbers are fixed for the whole tournament.
+
 ---
 
 ## 6. Cards and suspensions
@@ -169,6 +180,9 @@ A good forecaster is judged not by "did the favourite win" but by **whether thin
   give every team a solid baseline.
 - **"Isn't copying the bookmakers cheating?"** — We don't copy; we *blend*. The market is the accepted
   accuracy benchmark in sports forecasting, so ignoring it would be the mistake.
+- **"Why blend in the FIFA ranking if it's also Elo?"** — Because it's an *independent* Elo, tuned
+  differently and computed on different data. Averaging two independent estimates of the same thing cuts
+  the error — the same reason you ask a second doctor. We weight it 35%, so it informs without dominating.
 - **"How do you know it's any good?"** — You'd measure it with a **Brier score** or **log-loss** (which
   reward being well-calibrated), tested on past tournaments — not by whether one favourite happened to win.
 - **"What would make it better?"** — Player-level ratings (squad value, minutes, xG) and proper backtesting

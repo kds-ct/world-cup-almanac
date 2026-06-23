@@ -210,6 +210,38 @@ if ODDS_KEY:
             w.writerows(ODDS_ROWS)
         print(f"wrote data/wc2026_odds.csv ({len(ODDS_ROWS)} rows)", file=sys.stderr)
 
+# ---- official FIFA world ranking blend (always on; €0, no network) ----
+# FIFA computes its ranking with the Elo method, so it's an independent strength estimate. We rescale
+# the official points to OUR Elo distribution (over the 48) and pull the sim's strength anchor FIFA_W of
+# the way toward it. Points = official FIFA/Coca-Cola ranking, last update 11 Jun 2026, next 20 Jul 2026
+# (FIFA freezes the ranking during a World Cup, so one paste stays valid the whole tournament).
+FIFA_W = 0.35
+FIFA_RANKING = {   # app team name -> (global rank, points)
+    "Algeria":(28,1571.03), "Argentina":(1,1877.27), "Australia":(27,1579.34), "Austria":(24,1597.40),
+    "Belgium":(9,1742.24), "Bosnia & Herzegovina":(64,1387.22), "Brazil":(6,1765.86), "Canada":(30,1559.48),
+    "Cape Verde":(67,1371.11), "Colombia":(13,1698.35), "Croatia":(11,1714.87), "Curaçao":(82,1294.77),
+    "Czech Republic":(40,1505.74), "DR Congo":(46,1474.43), "Ecuador":(23,1598.52), "Egypt":(29,1562.37),
+    "England":(4,1828.02), "France":(3,1870.70), "Germany":(10,1735.77), "Ghana":(73,1346.88),
+    "Haiti":(83,1293.10), "Iran":(20,1619.58), "Iraq":(57,1446.28), "Ivory Coast":(33,1540.87),
+    "Japan":(18,1661.58), "Jordan":(63,1387.74), "Mexico":(14,1687.48), "Morocco":(7,1755.10),
+    "Netherlands":(8,1753.57), "New Zealand":(85,1275.58), "Norway":(31,1557.44), "Panama":(34,1539.16),
+    "Paraguay":(41,1505.35), "Portugal":(5,1767.85), "Qatar":(56,1450.31), "Saudi Arabia":(61,1423.88),
+    "Scotland":(42,1503.34), "Senegal":(15,1684.07), "South Africa":(60,1428.38), "South Korea":(25,1591.63),
+    "Spain":(2,1874.71), "Sweden":(38,1509.79), "Switzerland":(19,1650.06), "Tunisia":(45,1476.41),
+    "Turkey":(22,1605.73), "Uruguay":(16,1673.07), "USA":(17,1671.23), "Uzbekistan":(50,1458.73),
+}
+_fr_teams = [n for n in QUALIFIED if n in FIFA_RANKING]
+FIFA_E = {}
+if len(_fr_teams) >= 8:                                   # rescale FIFA points -> our Elo scale (z-score match)
+    _e0 = [final_elo[n] for n in _fr_teams]; _fp = [FIFA_RANKING[n][1] for n in _fr_teams]
+    _me, _mf = sum(_e0)/len(_e0), sum(_fp)/len(_fp)
+    _se = (sum((x-_me)**2 for x in _e0)/len(_e0))**0.5 or 1.0
+    _sf = (sum((x-_mf)**2 for x in _fp)/len(_fp))**0.5 or 1.0
+    FIFA_E = {n: round(_me + (FIFA_RANKING[n][1]-_mf)*(_se/_sf)) for n in _fr_teams}
+_miss_fifa = [n for n in QUALIFIED if n not in FIFA_RANKING]
+if _miss_fifa: print(f"FIFA ranking: no entry for {_miss_fifa} (using pure Elo for them)", file=sys.stderr)
+print(f"FIFA blend: {len(FIFA_E)} teams, sim anchor pulled {int(FIFA_W*100)}% toward the official ranking", file=sys.stderr)
+
 # ----------------------------------------------------------------------------- per-team-per-match CSV
 SPEC_COLS = ["date","competition","season","stage","team","confederation","opponent","home_away",
              "goals_for","goals_against","result","shots","shots_on_target","shots_off_target",
@@ -408,6 +440,9 @@ for m in played_g:                       # move ratings with the results already
     d = 60.0 * g_mult(fa - fb) * (w - expected(dr))
     live_elo[a] = ra + d; live_elo[b] = rb - d
 
+def rat(n):   # sim strength anchor = blend of the (live-evolved) Elo and the FIFA-equivalent Elo
+    return (1.0 - FIFA_W) * live_elo[n] + FIFA_W * FIFA_E[n] if n in FIFA_E else live_elo[n]
+
 cur = {n: [0,0,0,0] for n in QUALIFIED}    # P, Pts, GF, GA so far
 locked = defaultdict(list); remaining = defaultdict(list)
 for m in grp_matches:
@@ -461,7 +496,7 @@ for _ in range(N):
             elif fb>fa: tab[b][0]+=3
             else: tab[a][0]+=1; tab[b][0]+=1
         for (a, b) in remaining[g]:                       # simulate only the unplayed fixtures
-            ga, gb = sim_goals(a, b, live_elo[a], live_elo[b])
+            ga, gb = sim_goals(a, b, rat(a), rat(b))
             tab[a][1]+=ga-gb; tab[b][1]+=gb-ga; tab[a][2]+=ga; tab[b][2]+=gb
             if ga>gb: tab[a][0]+=3
             elif gb>ga: tab[b][0]+=3
@@ -485,21 +520,21 @@ for _ in range(N):
         ta = pos[a] if a[0] in ("1","2") else third_team[third_assign[mnum]]
         tb = pos[b] if b[0] in ("1","2") else third_team[third_assign[mnum]]
         if mnum in koWin and {ta, tb} == {koWin[mnum][1], koWin[mnum][2]}: w = koWin[mnum][0]
-        else: w = ko_winner(ta, tb, live_elo[ta], live_elo[tb])
+        else: w = ko_winner(ta, tb, rat(ta), rat(tb))
         winners[mnum] = w
         reach[w]["r16"] += 1
     for mnum in range(89, 103):          # R16 -> QF -> SF
         a, b = LATER[mnum]
         ta, tb = winners[a[1]], winners[b[1]]
         if mnum in koWin and {ta, tb} == {koWin[mnum][1], koWin[mnum][2]}: w = koWin[mnum][0]
-        else: w = ko_winner(ta, tb, live_elo[ta], live_elo[tb])
+        else: w = ko_winner(ta, tb, rat(ta), rat(tb))
         winners[mnum] = w
         if   89 <= mnum <= 96:  reach[w]["quarter"] += 1     # R16 winners reach QF
         elif 97 <= mnum <= 100: reach[w]["semi"] += 1        # QF winners reach SF
         else:                   reach[w]["final"] += 1       # SF winners = finalists
     fA, fB = winners[101], winners[102]
     if finalWin and {fA, fB} == {finalWin[1], finalWin[2]}: champ = finalWin[0]
-    else: champ = ko_winner(fA, fB, live_elo[fA], live_elo[fB])
+    else: champ = ko_winner(fA, fB, rat(fA), rat(fB))
     reach[champ]["title"] += 1
 
 power = []
@@ -508,6 +543,9 @@ for n, meta in QUALIFIED.items():
         "team": n, "confederation": meta["confed"], "group": meta["group"], "code": meta["code"],
         "elo": round(live_elo[n], 0),
         "elo_pre": round(final_elo[n], 0),
+        "fifa_rank": FIFA_RANKING.get(n, (None, None))[0],
+        "fifa_points": FIFA_RANKING.get(n, (None, None))[1],
+        "fifa_elo_equiv": FIFA_E.get(n),
         "host": n in HOSTS,
         "pl": cur[n][0], "pts": cur[n][1], "gd": cur[n][2]-cur[n][3],
         "form": FORM[n]["fm"], "form_pts": FORM[n]["fp"], "form_gd": FORM[n]["fgd"],
@@ -540,7 +578,10 @@ with open(os.path.join(OUT, "wc2026_power.json"), "w") as f:
                "as_of": AS_OF, "group_matches_played": len(played_g),
                "group_matches_total": len(grp_matches), "avg_qualifiers_per_sim": round(avg_q, 2),
                "matches_played": TOTAL_PLAYED, "matches_total": TOTAL_MATCHES, "confidence": CONF,
-               "market_blend": MARKET_BLEND, "teams": power}, f, indent=1, ensure_ascii=False)
+               "market_blend": MARKET_BLEND,
+               "fifa_blend": {"weight": FIFA_W, "n_teams": len(FIFA_E),
+                              "note": "Official FIFA/Coca-Cola ranking (frozen 11 Jun 2026, next 20 Jul) rescaled to our Elo distribution (fifa_elo_equiv) and blended into the sim's strength anchor."},
+               "teams": power}, f, indent=1, ensure_ascii=False)
 
 # ----------------------------------------------------------------------------- refresh dashboard embed
 # Keep index.html self-contained (works offline / via file://) by splicing the compact forecast in.
@@ -548,12 +589,15 @@ import re
 INDEX = os.path.join(os.path.dirname(HERE), "index.html")
 if os.path.exists(INDEX):
     rows_js = [("{{t:{t},c:{c},g:{g},e:{e},e0:{e0},h:{h},pl:{pl},pts:{pts},gd:{gd},fm:{fm},fp:{fp},fgd:{fgd},mt:{mt:.4f},"
-                "wg:{wg:.3f},ko:{ko:.3f},qf:{qf:.3f},sf:{sf:.3f},fn:{fn:.3f},ti:{ti:.4f}}}").format(
+                "wg:{wg:.3f},ko:{ko:.3f},qf:{qf:.3f},sf:{sf:.3f},fn:{fn:.3f},ti:{ti:.4f},fr:{fr},fpt:{fpt:.2f},fe:{fe}}}").format(
                 t=json.dumps(t["team"], ensure_ascii=False), c=json.dumps(t["confederation"]),
                 g=json.dumps(t["group"]), e=int(t["elo"]), e0=int(t["elo_pre"]), h=1 if t["host"] else 0,
                 pl=t["pl"], pts=t["pts"], gd=t["gd"], fm=json.dumps(t["form"]), fp=t["form_pts"], fgd=t["form_gd"],
                 mt=t["mkt_title"], wg=t["p_win_group"], ko=t["p_knockout"],
-                qf=t["p_quarter"], sf=t["p_semi"], fn=t["p_final"], ti=t["p_title"]) for t in power]
+                qf=t["p_quarter"], sf=t["p_semi"], fn=t["p_final"], ti=t["p_title"],
+                fr=(t["fifa_rank"] if t["fifa_rank"] is not None else 0),
+                fpt=(t["fifa_points"] if t["fifa_points"] is not None else 0.0),
+                fe=int(t["fifa_elo_equiv"]) if t["fifa_elo_equiv"] is not None else int(t["elo_pre"])) for t in power]
     const = ("const WC2026={{sims:{s},he:{he},gb:{gb:.3f},gg:{gg:.3f},mb:{mb},asOf:{a},played:{p},total:{tot},playedAll:{pa},totalAll:{ta},"
              "conf:{{data:{cd},C:{C},R:{Rr},S:{Sr},fs:{fs}}},teams:[\n{rows}\n]}};".format(
         s=N, he=int(HOST_BUMP), gb=GOAL_BASE, gg=GOAL_GAMMA, mb=1 if MARKET_BLEND else 0,

@@ -330,55 +330,55 @@ const DEFUNCT = new Set(["Soviet Union","West Germany","East Germany","Czechoslo
 /* 2026 forecast — World-Football Elo (computed from scratch over all internationals) + Monte-Carlo of the real
    2026 format (12 groups, top-2 + 8 best thirds, official R32→Final bracket). Built by tools/build_wc2026_dataset.py.
    Fields: t=team c=confed g=group e=elo h=host wg=P(win group) ko=P(reach knockout) qf/sf/fn=P(reach QF/SF/Final) ti=P(title). */
-const WC2026={sims:50000,he:50,gb:1.150,gg:0.330,mb:1,asOf:"2026-06-22",played:43,total:72,playedAll:43,totalAll:104,conf:{data:94,C:100,R:100,S:84,fs:31},teams:[
-{t:"Argentina",c:"CONMEBOL",g:"J",e:2188,e0:2159,h:0,pl:2,pts:6,gd:5,fm:"WWWWW",fp:15,fgd:15,mt:0.1246,wg:0.998,ko:1.000,qf:0.749,sf:0.574,fn:0.371,ti:0.2336},
-{t:"Spain",c:"UEFA",g:"H",e:2156,e0:2173,h:0,pl:2,pts:4,gd:4,fm:"DDWDW",fp:9,fgd:6,mt:0.1387,wg:0.883,ko:1.000,qf:0.592,sf:0.428,fn:0.261,ti:0.1467},
-{t:"France",c:"UEFA",g:"I",e:2166,e0:2140,h:0,pl:2,pts:6,gd:5,fm:"WLWWW",fp:12,fgd:8,mt:0.1835,wg:0.783,ko:1.000,qf:0.574,sf:0.395,fn:0.246,ti:0.1446},
-{t:"England",c:"UEFA",g:"L",e:2142,e0:2119,h:0,pl:1,pts:3,gd:2,fm:"DLWWW",fp:10,fgd:5,mt:0.1261,wg:0.937,ko:0.999,qf:0.553,sf:0.353,fn:0.196,ti:0.1107},
-{t:"USA",c:"CONCACAF",g:"D",e:1995,e0:1925,h:1,pl:2,pts:6,gd:5,fm:"LWLWW",fp:9,fgd:3,mt:0.0262,wg:0.997,ko:1.000,qf:0.599,sf:0.274,fn:0.125,ti:0.0517},
-{t:"Germany",c:"UEFA",g:"E",e:2066,e0:2035,h:0,pl:2,pts:6,gd:7,fm:"WWWWW",fp:15,fgd:13,mt:0.0582,wg:0.999,ko:1.000,qf:0.363,sf:0.211,fn:0.105,ti:0.0451},
-{t:"Portugal",c:"UEFA",g:"K",e:2069,e0:2091,h:0,pl:1,pts:1,gd:0,fm:"DWWWD",fp:11,fgd:4,mt:0.0782,wg:0.342,ko:0.903,qf:0.382,sf:0.195,fn:0.095,ti:0.0433},
-{t:"Netherlands",c:"UEFA",g:"F",e:2072,e0:2049,h:0,pl:2,pts:4,gd:4,fm:"DLWDW",fp:8,fgd:4,mt:0.0520,wg:0.711,ko:1.000,qf:0.385,sf:0.183,fn:0.091,ti:0.0394},
-{t:"Brazil",c:"CONMEBOL",g:"C",e:2073,e0:2069,h:0,pl:2,pts:4,gd:3,fm:"WWWDW",fp:13,fgd:10,mt:0.0495,wg:0.622,ko:1.000,qf:0.343,sf:0.171,fn:0.079,ti:0.0358},
-{t:"Colombia",c:"CONMEBOL",g:"K",e:2028,e0:2012,h:0,pl:1,pts:3,gd:2,fm:"LLWWW",fp:9,fgd:3,mt:0.0149,wg:0.579,ko:0.989,qf:0.406,sf:0.171,fn:0.073,ti:0.0288},
-{t:"Mexico",c:"CONCACAF",g:"A",e:1989,e0:1957,h:1,pl:2,pts:6,gd:3,fm:"WWWWW",fp:15,fgd:10,mt:0.0123,wg:0.961,ko:1.000,qf:0.309,sf:0.151,fn:0.062,ti:0.0253},
-{t:"Norway",c:"UEFA",g:"I",e:2024,e0:1984,h:0,pl:2,pts:6,gd:4,fm:"DWDWW",fp:11,fgd:6,mt:0.0259,wg:0.217,ko:1.000,qf:0.343,sf:0.152,fn:0.062,ti:0.0246},
-{t:"Morocco",c:"CAF",g:"C",e:2024,e0:2002,h:0,pl:2,pts:4,gd:1,fm:"WWDDW",fp:11,fgd:10,mt:0.0207,wg:0.348,ko:1.000,qf:0.292,sf:0.122,fn:0.053,ti:0.0207},
-{t:"Japan",c:"AFC",g:"F",e:2005,e0:1983,h:0,pl:2,pts:4,gd:4,fm:"WWWDW",fp:13,fgd:7,mt:0.0191,wg:0.252,ko:1.000,qf:0.236,sf:0.094,fn:0.036,ti:0.0130},
-{t:"Switzerland",c:"UEFA",g:"B",e:1947,e0:1940,h:0,pl:2,pts:4,gd:3,fm:"DWDDW",fp:9,fgd:6,mt:0.0077,wg:0.376,ko:1.000,qf:0.258,sf:0.078,fn:0.026,ti:0.0075},
-{t:"Belgium",c:"UEFA",g:"G",e:1953,e0:1977,h:0,pl:2,pts:2,gd:0,fm:"DWWDD",fp:9,fgd:7,mt:0.0149,wg:0.159,ko:0.868,qf:0.155,sf:0.063,fn:0.022,ti:0.0069},
-{t:"Canada",c:"CONCACAF",g:"B",e:1885,e0:1877,h:1,pl:2,pts:4,gd:6,fm:"DWDDW",fp:9,fgd:8,mt:0.0037,wg:0.624,ko:1.000,qf:0.251,sf:0.071,fn:0.022,ti:0.0064},
-{t:"Croatia",c:"UEFA",g:"L",e:1913,e0:1936,h:0,pl:1,pts:0,gd:-2,fm:"WLLWL",fp:6,fgd:-4,mt:0.0048,wg:0.020,ko:0.768,qf:0.106,sf:0.038,fn:0.011,ti:0.0028},
-{t:"Egypt",c:"CAF",g:"G",e:1878,e0:1835,h:0,pl:2,pts:4,gd:2,fm:"DWLDW",fp:8,fgd:2,mt:0.0030,wg:0.634,ko:1.000,qf:0.159,sf:0.042,fn:0.011,ti:0.0023},
-{t:"Australia",c:"AFC",g:"D",e:1890,e0:1867,h:0,pl:2,pts:3,gd:0,fm:"WLDWL",fp:7,fgd:3,mt:0.0030,wg:0.003,ko:0.950,qf:0.084,sf:0.031,fn:0.008,ti:0.0020},
-{t:"Austria",c:"UEFA",g:"J",e:1880,e0:1861,h:0,pl:2,pts:3,gd:0,fm:"WWWWL",fp:12,fgd:6,mt:0.0024,wg:0.002,ko:0.970,qf:0.095,sf:0.032,fn:0.008,ti:0.0017},
-{t:"Ivory Coast",c:"CAF",g:"E",e:1885,e0:1868,h:0,pl:2,pts:3,gd:0,fm:"WWWWL",fp:12,fgd:6,mt:0.0043,wg:0.001,ko:0.958,qf:0.087,sf:0.022,fn:0.005,ti:0.0015},
-{t:"South Korea",c:"AFC",g:"A",e:1865,e0:1859,h:0,pl:2,pts:3,gd:0,fm:"LWWWL",fp:9,fgd:5,mt:0.0023,wg:0.039,ko:0.956,qf:0.107,sf:0.024,fn:0.006,ti:0.0011},
-{t:"Paraguay",c:"CONMEBOL",g:"D",e:1865,e0:1865,h:0,pl:2,pts:3,gd:-2,fm:"WLWLW",fp:9,fgd:2,mt:0.0016,wg:0.000,ko:0.826,qf:0.057,sf:0.019,fn:0.004,ti:0.0009},
-{t:"Uruguay",c:"CONMEBOL",g:"H",e:1873,e0:1899,h:0,pl:2,pts:2,gd:0,fm:"LDDDD",fp:4,fgd:-4,mt:0.0021,wg:0.095,ko:0.401,qf:0.051,sf:0.016,fn:0.004,ti:0.0009},
-{t:"Senegal",c:"CAF",g:"I",e:1870,e0:1909,h:0,pl:2,pts:0,gd:-3,fm:"WLDLL",fp:4,fgd:-2,mt:0.0039,wg:0.000,ko:0.530,qf:0.065,sf:0.016,fn:0.004,ti:0.0007},
-{t:"Ecuador",c:"CONMEBOL",g:"E",e:1874,e0:1927,h:0,pl:2,pts:1,gd:-1,fm:"DWWLD",fp:8,fgd:3,mt:0.0023,wg:0.000,ko:0.201,qf:0.022,sf:0.006,fn:0.002,ti:0.0004},
-{t:"Sweden",c:"UEFA",g:"F",e:1824,e0:1810,h:0,pl:2,pts:3,gd:0,fm:"WLDWL",fp:7,fgd:-1,mt:0.0029,wg:0.037,ko:0.958,qf:0.061,sf:0.012,fn:0.003,ti:0.0004},
-{t:"Iran",c:"AFC",g:"G",e:1830,e0:1826,h:0,pl:2,pts:2,gd:0,fm:"WWWDD",fp:11,fgd:9,mt:0.0010,wg:0.207,ko:0.653,qf:0.063,sf:0.014,fn:0.003,ti:0.0004},
-{t:"Scotland",c:"UEFA",g:"C",e:1819,e0:1816,h:0,pl:2,pts:3,gd:0,fm:"LWWWL",fp:9,fgd:6,mt:0.0016,wg:0.031,ko:0.879,qf:0.041,sf:0.009,fn:0.002,ti:0.0002},
-{t:"DR Congo",c:"CAF",g:"K",e:1795,e0:1773,h:0,pl:1,pts:1,gd:0,fm:"WWDLD",fp:8,fgd:2,mt:0.0010,wg:0.071,ko:0.595,qf:0.040,sf:0.008,fn:0.002,ti:0.0002},
-{t:"Bosnia & Herzegovina",c:"UEFA",g:"B",e:1719,e0:1732,h:0,pl:2,pts:1,gd:-3,fm:"DDDDL",fp:4,fgd:-3,mt:0.0012,wg:0.000,ko:0.457,qf:0.015,sf:0.002,fn:0.000,ti:0.0001},
-{t:"Algeria",c:"CAF",g:"J",e:1815,e0:1829,h:0,pl:1,pts:0,gd:-3,fm:"DWWLW",fp:10,fgd:3,mt:0.0012,wg:0.000,ko:0.501,qf:0.036,sf:0.007,fn:0.001,ti:0.0001},
-{t:"Ghana",c:"CAF",g:"L",e:1740,e0:1703,h:0,pl:1,pts:3,gd:1,fm:"LLLDW",fp:4,fgd:-6,mt:0.0014,wg:0.041,ko:0.811,qf:0.035,sf:0.005,fn:0.001,ti:0.0001},
-{t:"South Africa",c:"CAF",g:"A",e:1698,e0:1704,h:0,pl:2,pts:1,gd:-2,fm:"LDWLD",fp:5,fgd:-2,mt:0.0008,wg:0.000,ko:0.205,qf:0.006,sf:0.001,fn:0.000,ti:0.0000},
-{t:"Czech Republic",c:"UEFA",g:"A",e:1766,e0:1798,h:0,pl:2,pts:1,gd:-1,fm:"DWWLD",fp:8,fgd:4,mt:0.0012,wg:0.000,ko:0.157,qf:0.009,sf:0.002,fn:0.000,ti:0.0000},
-{t:"Qatar",c:"AFC",g:"B",e:1634,e0:1637,h:0,pl:2,pts:1,gd:-6,fm:"LLDDL",fp:2,fgd:-10,mt:0.0007,wg:0.000,ko:0.272,qf:0.004,sf:0.000,fn:0.000,ti:0.0000},
-{t:"Haiti",c:"CONCACAF",g:"C",e:1663,e0:1693,h:0,pl:2,pts:0,gd:-4,fm:"DWLLL",fp:4,fgd:-1,mt:0.0000,wg:0.000,ko:0.011,qf:0.000,sf:0.000,fn:0.000,ti:0.0000},
-{t:"Turkey",c:"UEFA",g:"D",e:1865,e0:1958,h:0,pl:2,pts:0,gd:-3,fm:"WWWLL",fp:9,fgd:3,mt:0.0000,wg:0.000,ko:0.083,qf:0.005,sf:0.001,fn:0.000,ti:0.0000},
-{t:"Curaçao",c:"CONCACAF",g:"E",e:1663,e0:1658,h:0,pl:2,pts:1,gd:-6,fm:"LLWLD",fp:4,fgd:-9,mt:0.0007,wg:0.000,ko:0.158,qf:0.002,sf:0.000,fn:0.000,ti:0.0000},
-{t:"Tunisia",c:"CAF",g:"F",e:1660,e0:1717,h:0,pl:2,pts:0,gd:-8,fm:"DLLLL",fp:1,fgd:-14,mt:0.0000,wg:0.000,ko:0.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000},
-{t:"New Zealand",c:"OFC",g:"G",e:1705,e0:1728,h:0,pl:2,pts:1,gd:-2,fm:"WLLDL",fp:4,fgd:-4,mt:0.0009,wg:0.000,ko:0.142,qf:0.004,sf:0.001,fn:0.000,ti:0.0000},
-{t:"Cape Verde",c:"CAF",g:"H",e:1750,e0:1712,h:0,pl:2,pts:2,gd:0,fm:"DWLDD",fp:6,fgd:0,mt:0.0009,wg:0.022,ko:0.689,qf:0.019,sf:0.004,fn:0.000,ti:0.0000},
-{t:"Saudi Arabia",c:"AFC",g:"H",e:1727,e0:1723,h:0,pl:2,pts:1,gd:-4,fm:"LWDDL",fp:5,fgd:-2,mt:0.0009,wg:0.000,ko:0.334,qf:0.007,sf:0.001,fn:0.000,ti:0.0000},
-{t:"Iraq",c:"AFC",g:"I",e:1696,e0:1722,h:0,pl:2,pts:0,gd:-6,fm:"WDLLL",fp:4,fgd:-7,mt:0.0007,wg:0.000,ko:0.100,qf:0.003,sf:0.000,fn:0.000,ti:0.0000},
-{t:"Jordan",c:"AFC",g:"J",e:1737,e0:1771,h:0,pl:1,pts:0,gd:-2,fm:"DLLLL",fp:1,fgd:-8,mt:0.0000,wg:0.001,ko:0.214,qf:0.010,sf:0.002,fn:0.000,ti:0.0000},
-{t:"Uzbekistan",c:"AFC",g:"K",e:1740,e0:1757,h:0,pl:1,pts:0,gd:-2,fm:"WDLLL",fp:4,fgd:-3,mt:0.0008,wg:0.009,ko:0.278,qf:0.009,sf:0.002,fn:0.000,ti:0.0000},
-{t:"Panama",c:"CONCACAF",g:"L",e:1747,e0:1783,h:0,pl:1,pts:0,gd:-1,fm:"WLWDL",fp:7,fgd:-2,mt:0.0008,wg:0.003,ko:0.185,qf:0.008,sf:0.001,fn:0.000,ti:0.0000}
+const WC2026={sims:50000,he:50,gb:1.150,gg:0.330,mb:1,asOf:"2026-06-23",played:45,total:72,playedAll:45,totalAll:104,conf:{data:94,C:100,R:100,S:84,fs:31},teams:[
+{t:"Argentina",c:"CONMEBOL",g:"J",e:2188,e0:2159,h:0,pl:2,pts:6,gd:5,fm:"WWWWW",fp:15,fgd:15,mt:0.1246,wg:0.999,ko:1.000,qf:0.718,sf:0.533,fn:0.346,ti:0.2142,fr:1,fpt:1877.27,fe:2145},
+{t:"France",c:"UEFA",g:"I",e:2166,e0:2140,h:0,pl:2,pts:6,gd:5,fm:"WLWWW",fp:12,fgd:8,mt:0.1835,wg:0.818,ko:1.000,qf:0.580,sf:0.403,fn:0.251,ti:0.1486,fr:3,fpt:1870.70,fe:2139},
+{t:"Spain",c:"UEFA",g:"H",e:2157,e0:2173,h:0,pl:2,pts:4,gd:4,fm:"DDWDW",fp:9,fgd:6,mt:0.1387,wg:0.860,ko:1.000,qf:0.564,sf:0.413,fn:0.255,ti:0.1486,fr:2,fpt:1874.71,fe:2142},
+{t:"England",c:"UEFA",g:"L",e:2142,e0:2119,h:0,pl:1,pts:3,gd:2,fm:"DLWWW",fp:10,fgd:5,mt:0.1261,wg:0.934,ko:0.999,qf:0.537,sf:0.345,fn:0.190,ti:0.1059,fr:4,fpt:1828.02,fe:2100},
+{t:"Portugal",c:"UEFA",g:"K",e:2085,e0:2091,h:0,pl:2,pts:4,gd:5,fm:"DWWWD",fp:11,fgd:4,mt:0.0782,wg:0.514,ko:1.000,qf:0.468,sf:0.239,fn:0.121,ti:0.0581,fr:5,fpt:1767.85,fe:2046},
+{t:"USA",c:"CONCACAF",g:"D",e:1995,e0:1925,h:1,pl:2,pts:6,gd:5,fm:"LWLWW",fp:9,fgd:3,mt:0.0262,wg:0.996,ko:1.000,qf:0.557,sf:0.249,fn:0.114,ti:0.0467,fr:17,fpt:1671.23,fe:1960},
+{t:"Brazil",c:"CONMEBOL",g:"C",e:2073,e0:2069,h:0,pl:2,pts:4,gd:3,fm:"WWWDW",fp:13,fgd:10,mt:0.0495,wg:0.608,ko:1.000,qf:0.369,sf:0.186,fn:0.090,ti:0.0419,fr:6,fpt:1765.86,fe:2045},
+{t:"Germany",c:"UEFA",g:"E",e:2066,e0:2035,h:0,pl:2,pts:6,gd:7,fm:"WWWWW",fp:15,fgd:13,mt:0.0582,wg:0.999,ko:1.000,qf:0.351,sf:0.201,fn:0.098,ti:0.0407,fr:10,fpt:1735.77,fe:2018},
+{t:"Netherlands",c:"UEFA",g:"F",e:2071,e0:2049,h:0,pl:2,pts:4,gd:4,fm:"DLWDW",fp:8,fgd:4,mt:0.0520,wg:0.667,ko:1.000,qf:0.367,sf:0.174,fn:0.086,ti:0.0390,fr:8,fpt:1753.57,fe:2034},
+{t:"Mexico",c:"CONCACAF",g:"A",e:1989,e0:1957,h:1,pl:2,pts:6,gd:3,fm:"WWWWW",fp:15,fgd:10,mt:0.0123,wg:0.954,ko:1.000,qf:0.318,sf:0.165,fn:0.071,ti:0.0300,fr:14,fpt:1687.48,fe:1974},
+{t:"Morocco",c:"CAF",g:"C",e:2024,e0:2002,h:0,pl:2,pts:4,gd:1,fm:"WWDDW",fp:11,fgd:10,mt:0.0207,wg:0.362,ko:1.000,qf:0.328,sf:0.142,fn:0.063,ti:0.0273,fr:7,fpt:1755.10,fe:2035},
+{t:"Colombia",c:"CONMEBOL",g:"K",e:2029,e0:2012,h:0,pl:1,pts:3,gd:2,fm:"LLWWW",fp:9,fgd:3,mt:0.0149,wg:0.447,ko:0.996,qf:0.355,sf:0.157,fn:0.066,ti:0.0254,fr:13,fpt:1698.35,fe:1984},
+{t:"Japan",c:"AFC",g:"F",e:2005,e0:1983,h:0,pl:2,pts:4,gd:4,fm:"WWWDW",fp:13,fgd:7,mt:0.0191,wg:0.285,ko:1.000,qf:0.233,sf:0.092,fn:0.036,ti:0.0125,fr:18,fpt:1661.58,fe:1951},
+{t:"Norway",c:"UEFA",g:"I",e:2024,e0:1984,h:0,pl:2,pts:6,gd:4,fm:"DWDWW",fp:11,fgd:6,mt:0.0259,wg:0.182,ko:1.000,qf:0.274,sf:0.105,fn:0.037,ti:0.0123,fr:31,fpt:1557.44,fe:1858},
+{t:"Belgium",c:"UEFA",g:"G",e:1953,e0:1977,h:0,pl:2,pts:2,gd:0,fm:"DWWDD",fp:9,fgd:7,mt:0.0149,wg:0.203,ko:0.893,qf:0.199,sf:0.085,fn:0.033,ti:0.0115,fr:9,fpt:1742.24,fe:2023},
+{t:"Switzerland",c:"UEFA",g:"B",e:1947,e0:1940,h:0,pl:2,pts:4,gd:3,fm:"DWDDW",fp:9,fgd:6,mt:0.0077,wg:0.380,ko:1.000,qf:0.247,sf:0.079,fn:0.028,ti:0.0085,fr:19,fpt:1650.06,fe:1941},
+{t:"Canada",c:"CONCACAF",g:"B",e:1886,e0:1877,h:1,pl:2,pts:4,gd:6,fm:"DWDDW",fp:9,fgd:8,mt:0.0037,wg:0.620,ko:1.000,qf:0.227,sf:0.067,fn:0.022,ti:0.0063,fr:30,fpt:1559.48,fe:1859},
+{t:"Croatia",c:"UEFA",g:"L",e:1913,e0:1936,h:0,pl:1,pts:0,gd:-2,fm:"WLLWL",fp:6,fgd:-4,mt:0.0048,wg:0.025,ko:0.791,qf:0.126,sf:0.051,fn:0.017,ti:0.0052,fr:11,fpt:1714.87,fe:1999},
+{t:"Egypt",c:"CAF",g:"G",e:1878,e0:1835,h:0,pl:2,pts:4,gd:2,fm:"DWLDW",fp:8,fgd:2,mt:0.0030,wg:0.584,ko:1.000,qf:0.152,sf:0.038,fn:0.011,ti:0.0021,fr:29,fpt:1562.37,fe:1862},
+{t:"Austria",c:"UEFA",g:"J",e:1879,e0:1861,h:0,pl:2,pts:3,gd:0,fm:"WWWWL",fp:12,fgd:6,mt:0.0024,wg:0.001,ko:0.964,qf:0.096,sf:0.030,fn:0.008,ti:0.0020,fr:24,fpt:1597.40,fe:1893},
+{t:"Uruguay",c:"CONMEBOL",g:"H",e:1873,e0:1899,h:0,pl:2,pts:2,gd:0,fm:"LDDDD",fp:4,fgd:-4,mt:0.0021,wg:0.118,ko:0.405,qf:0.061,sf:0.021,fn:0.007,ti:0.0017,fr:16,fpt:1673.07,fe:1961},
+{t:"Senegal",c:"CAF",g:"I",e:1870,e0:1909,h:0,pl:2,pts:0,gd:-3,fm:"WLDLL",fp:4,fgd:-2,mt:0.0039,wg:0.000,ko:0.535,qf:0.080,sf:0.024,fn:0.007,ti:0.0017,fr:15,fpt:1684.07,fe:1971},
+{t:"Australia",c:"AFC",g:"D",e:1890,e0:1867,h:0,pl:2,pts:3,gd:0,fm:"WLDWL",fp:7,fgd:3,mt:0.0030,wg:0.004,ko:0.947,qf:0.085,sf:0.031,fn:0.008,ti:0.0016,fr:27,fpt:1579.34,fe:1877},
+{t:"South Korea",c:"AFC",g:"A",e:1865,e0:1859,h:0,pl:2,pts:3,gd:0,fm:"LWWWL",fp:9,fgd:5,mt:0.0023,wg:0.046,ko:0.953,qf:0.116,sf:0.029,fn:0.008,ti:0.0016,fr:25,fpt:1591.63,fe:1888},
+{t:"Iran",c:"AFC",g:"G",e:1830,e0:1826,h:0,pl:2,pts:2,gd:0,fm:"WWWDD",fp:11,fgd:9,mt:0.0010,wg:0.213,ko:0.666,qf:0.081,sf:0.021,fn:0.005,ti:0.0014,fr:20,fpt:1619.58,fe:1913},
+{t:"Ivory Coast",c:"CAF",g:"E",e:1885,e0:1868,h:0,pl:2,pts:3,gd:0,fm:"WWWWL",fp:12,fgd:6,mt:0.0043,wg:0.001,ko:0.953,qf:0.093,sf:0.023,fn:0.005,ti:0.0012,fr:33,fpt:1540.87,fe:1843},
+{t:"Algeria",c:"CAF",g:"J",e:1839,e0:1829,h:0,pl:2,pts:3,gd:-2,fm:"DWWLW",fp:10,fgd:3,mt:0.0012,wg:0.000,ko:0.851,qf:0.081,sf:0.021,fn:0.005,ti:0.0011,fr:28,fpt:1571.03,fe:1870},
+{t:"Paraguay",c:"CONMEBOL",g:"D",e:1865,e0:1865,h:0,pl:2,pts:3,gd:-2,fm:"WLWLW",fp:9,fgd:2,mt:0.0016,wg:0.000,ko:0.802,qf:0.051,sf:0.016,fn:0.004,ti:0.0009,fr:41,fpt:1505.35,fe:1811},
+{t:"Ecuador",c:"CONMEBOL",g:"E",e:1874,e0:1927,h:0,pl:2,pts:1,gd:-1,fm:"DWWLD",fp:8,fgd:3,mt:0.0023,wg:0.000,ko:0.211,qf:0.025,sf:0.007,fn:0.002,ti:0.0005,fr:23,fpt:1598.52,fe:1894},
+{t:"Sweden",c:"UEFA",g:"F",e:1824,e0:1810,h:0,pl:2,pts:3,gd:0,fm:"WLDWL",fp:7,fgd:-1,mt:0.0029,wg:0.048,ko:0.956,qf:0.065,sf:0.014,fn:0.003,ti:0.0004,fr:38,fpt:1509.79,fe:1815},
+{t:"Scotland",c:"UEFA",g:"C",e:1820,e0:1816,h:0,pl:2,pts:3,gd:0,fm:"LWWWL",fp:9,fgd:6,mt:0.0016,wg:0.030,ko:0.873,qf:0.047,sf:0.011,fn:0.002,ti:0.0003,fr:42,fpt:1503.34,fe:1809},
+{t:"DR Congo",c:"CAF",g:"K",e:1795,e0:1773,h:0,pl:1,pts:1,gd:0,fm:"WWDLD",fp:8,fgd:2,mt:0.0010,wg:0.039,ko:0.587,qf:0.033,sf:0.008,fn:0.001,ti:0.0002,fr:46,fpt:1474.43,fe:1783},
+{t:"Turkey",c:"UEFA",g:"D",e:1865,e0:1958,h:0,pl:2,pts:0,gd:-3,fm:"WWWLL",fp:9,fgd:3,mt:0.0000,wg:0.000,ko:0.093,qf:0.006,sf:0.002,fn:0.000,ti:0.0001,fr:22,fpt:1605.73,fe:1901},
+{t:"Panama",c:"CONCACAF",g:"L",e:1746,e0:1783,h:0,pl:1,pts:0,gd:-1,fm:"WLWDL",fp:7,fgd:-2,mt:0.0008,wg:0.005,ko:0.197,qf:0.011,sf:0.002,fn:0.000,ti:0.0001,fr:34,fpt:1539.16,fe:1841},
+{t:"Bosnia & Herzegovina",c:"UEFA",g:"B",e:1719,e0:1732,h:0,pl:2,pts:1,gd:-3,fm:"DDDDL",fp:4,fgd:-3,mt:0.0012,wg:0.000,ko:0.409,qf:0.014,sf:0.002,fn:0.000,ti:0.0001,fr:64,fpt:1387.22,fe:1705},
+{t:"Ghana",c:"CAF",g:"L",e:1740,e0:1703,h:0,pl:1,pts:3,gd:1,fm:"LLLDW",fp:4,fgd:-6,mt:0.0014,wg:0.036,ko:0.756,qf:0.025,sf:0.004,fn:0.000,ti:0.0000,fr:73,fpt:1346.88,fe:1669},
+{t:"Czech Republic",c:"UEFA",g:"A",e:1766,e0:1798,h:0,pl:2,pts:1,gd:-1,fm:"DWWLD",fp:8,fgd:4,mt:0.0012,wg:0.000,ko:0.163,qf:0.011,sf:0.002,fn:0.000,ti:0.0000,fr:40,fpt:1505.74,fe:1811},
+{t:"Qatar",c:"AFC",g:"B",e:1634,e0:1637,h:0,pl:2,pts:1,gd:-6,fm:"LLDDL",fp:2,fgd:-10,mt:0.0007,wg:0.000,ko:0.311,qf:0.007,sf:0.001,fn:0.000,ti:0.0000,fr:56,fpt:1450.31,fe:1761},
+{t:"Cape Verde",c:"CAF",g:"H",e:1750,e0:1712,h:0,pl:2,pts:2,gd:0,fm:"DWLDD",fp:6,fgd:0,mt:0.0009,wg:0.022,ko:0.644,qf:0.016,sf:0.003,fn:0.000,ti:0.0000,fr:67,fpt:1371.11,fe:1690},
+{t:"Iraq",c:"AFC",g:"I",e:1696,e0:1722,h:0,pl:2,pts:0,gd:-6,fm:"WDLLL",fp:4,fgd:-7,mt:0.0007,wg:0.000,ko:0.088,qf:0.003,sf:0.000,fn:0.000,ti:0.0000,fr:57,fpt:1446.28,fe:1758},
+{t:"South Africa",c:"CAF",g:"A",e:1698,e0:1704,h:0,pl:2,pts:1,gd:-2,fm:"LDWLD",fp:5,fgd:-2,mt:0.0008,wg:0.000,ko:0.186,qf:0.006,sf:0.001,fn:0.000,ti:0.0000,fr:60,fpt:1428.38,fe:1742},
+{t:"Haiti",c:"CONCACAF",g:"C",e:1663,e0:1693,h:0,pl:2,pts:0,gd:-4,fm:"DWLLL",fp:4,fgd:-1,mt:0.0000,wg:0.000,ko:0.009,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:83,fpt:1293.10,fe:1620},
+{t:"Curaçao",c:"CONCACAF",g:"E",e:1663,e0:1658,h:0,pl:2,pts:1,gd:-6,fm:"LLWLD",fp:4,fgd:-9,mt:0.0007,wg:0.000,ko:0.159,qf:0.002,sf:0.000,fn:0.000,ti:0.0000,fr:82,fpt:1294.77,fe:1622},
+{t:"Tunisia",c:"CAF",g:"F",e:1660,e0:1717,h:0,pl:2,pts:0,gd:-8,fm:"DLLLL",fp:1,fgd:-14,mt:0.0000,wg:0.000,ko:0.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:45,fpt:1476.41,fe:1785},
+{t:"New Zealand",c:"OFC",g:"G",e:1705,e0:1728,h:0,pl:2,pts:1,gd:-2,fm:"WLLDL",fp:4,fgd:-4,mt:0.0009,wg:0.000,ko:0.111,qf:0.002,sf:0.000,fn:0.000,ti:0.0000,fr:85,fpt:1275.58,fe:1605},
+{t:"Saudi Arabia",c:"AFC",g:"H",e:1727,e0:1723,h:0,pl:2,pts:1,gd:-4,fm:"LWDDL",fp:5,fgd:-2,mt:0.0009,wg:0.000,ko:0.368,qf:0.008,sf:0.001,fn:0.000,ti:0.0000,fr:61,fpt:1423.88,fe:1738},
+{t:"Jordan",c:"AFC",g:"J",e:1714,e0:1771,h:0,pl:2,pts:0,gd:-3,fm:"DLLLL",fp:1,fgd:-8,mt:0.0000,wg:0.000,ko:0.019,qf:0.001,sf:0.000,fn:0.000,ti:0.0000,fr:63,fpt:1387.74,fe:1705},
+{t:"Uzbekistan",c:"AFC",g:"K",e:1724,e0:1757,h:0,pl:2,pts:0,gd:-7,fm:"WDLLL",fp:4,fgd:-3,mt:0.0008,wg:0.000,ko:0.106,qf:0.002,sf:0.000,fn:0.000,ti:0.0000,fr:50,fpt:1458.73,fe:1769}
 ]};
 
 const cache = {};
@@ -961,18 +961,19 @@ function forecastHTML(){
     <div style="width:148px;height:148px;border-radius:50%;background:conic-gradient(${segs.join(",")});flex:none;position:relative"><div style="position:absolute;inset:33px;border-radius:50%;background:var(--panel);display:flex;align-items:center;justify-content:center;flex-direction:column"><span style="font-family:'Bebas Neue';font-size:30px;line-height:1">${confEnt.length}</span><span style="font-size:9px;letter-spacing:.14em;color:var(--muted)">CONFEDS</span></div></div>
     <div class="legend">${confEnt.map(([k,v])=>`<div class="row"><span class="sw" style="background:${COL[k]||"#888"}"></span>${escapeHtml(k)}<span class="n">${fpct(v)}</span></div>`).join("")}</div></div></section>`;
 
-  /* Strength ranking — by World-Football Elo (the same Elo method FIFA's official ranking uses) */
-  const ranked=T.slice().sort((a,b)=>b.e0-a.e0);
-  html+=`<section class="panel col-12 reveal"><div class="phead"><h2>Strength Ranking</h2><span class="meta">pre-tournament Elo · FIFA's ranking uses the same Elo method</span></div>
-    <div class="groups" style="grid-template-columns:repeat(auto-fit,minmax(225px,1fr))">`;
-  ranked.forEach((t,i)=>{ const mom=Math.round((t.e||0)-(t.e0||0));
-    html+=`<div style="display:grid;grid-template-columns:24px 22px 1fr auto auto;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--line)">
-      <span class="pts" style="font-size:13px;color:var(--muted)">${i+1}</span>${flag(t.t,"flag sm")}
+  /* Official FIFA world ranking (frozen for the tournament) — blended into the forecast; our Elo shown alongside */
+  const hasFifa=T.some(t=>t.fpt!=null);
+  const ranked=T.slice().sort((a,b)=>(b.fpt||b.e0||0)-(a.fpt||a.e0||0));
+  html+=`<section class="panel col-12 reveal"><div class="phead"><h2>FIFA World Ranking</h2><span class="meta">official · frozen 11 Jun → 20 Jul 2026 · blended ${Math.round(FIFA_W*100)}% into the forecast</span></div>
+    <div class="groups" style="grid-template-columns:repeat(auto-fit,minmax(250px,1fr))">`;
+  ranked.forEach((t,i)=>{ const mom=Math.round((t.e||t.e0||0)-(t.e0||0)); const ar=mom>0?'▲':mom<0?'▼':'■'; const wcRank=i+1;
+    html+=`<div style="display:grid;grid-template-columns:46px 20px 1fr auto auto;align-items:center;gap:7px;padding:6px 4px;border-bottom:1px solid var(--line)">
+      <span class="pts" style="font-size:11.5px;color:var(--muted);font-variant-numeric:tabular-nums" title="world rank #${t.fr??"–"} · ${wcRank} of 48 at the World Cup"><b style="color:var(--ink)">${wcRank}</b> <span style="color:var(--muted2)">·#${t.fr??"–"}</span></span>${flag(t.t,"flag sm")}
       <span class="nm" style="font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t.t)}</span>
-      <span style="font-family:'Bebas Neue';font-size:16px">${Math.round(t.e0)}</span>
-      <span style="font-size:9.5px;color:${mom>0?'var(--grass)':mom<0?'var(--red)':'var(--muted2)'};min-width:28px;text-align:right" title="live Elo change during the tournament">${mom>0?'▲':mom<0?'▼':'■'}${Math.abs(mom)}</span></div>`; });
+      <span style="font-family:'Bebas Neue';font-size:17px;line-height:1" title="official FIFA points">${t.fpt!=null?Math.round(t.fpt):"–"}</span>
+      <span style="font-size:9px;color:var(--muted2);text-align:right;min-width:62px" title="our World-Football Elo (live) and its change during the tournament">Elo ${t.e||t.e0} <span style="color:${mom>0?'var(--grass)':mom<0?'var(--red)':'var(--muted2)'}">${ar}${Math.abs(mom)}</span></span></div>`; });
   html+=`</div>
-    <p class="note" style="margin-top:12px">These are our <b style="color:var(--ink)">World-Football Elo</b> ratings at kick-off, computed from every international since 1872 — and they're already the backbone of every forecast number above. FIFA's official ranking runs on the <i>same Elo formula</i>, so this is a live stand-in for it; the ▲▼ shows how each rating has shifted during the tournament. <span style="color:var(--muted2)">(The exact official FIFA points have no free live API and are frozen during the World Cup — they can be pasted in once if you want the precise figures shown.)</span></p>
+    <p class="note" style="margin-top:12px">The <b style="color:var(--ink)">official FIFA / Coca-Cola World Ranking</b> points, ${hasFifa?'':'<i>not yet embedded — showing Elo only.</i> '}frozen for the tournament (last update 11 Jun 2026, next 20 Jul). FIFA computes these with the <i>Elo method</i>, so we blend them <b>${Math.round(FIFA_W*100)}%</b> into every forecast number above, alongside our own <b style="color:var(--ink)">World-Football Elo</b> (shown small, with its ▲▼ change during the tournament). The big number is FIFA's; <b>#</b> is the world rank, and the bold figure is the team's rank among the 48 here. Where the two disagree — a side we rate high but FIFA rates lower — the blend splits the difference, which keeps the model honest.</p>
   </section>`;
 
   /* Road to the final — nested survival funnel */
@@ -1040,6 +1041,8 @@ const LATERT={89:[74,77],90:[73,75],91:[76,78],92:[79,80],93:[83,84],94:[81,82],
  97:[89,90],98:[93,94],99:[91,92],100:[95,96],101:[97,98],102:[99,100]};
 const THIRD_SLOTS=Object.keys(R32T).map(Number).filter(m=>R32T[m][1][0]==="3");
 const HOST_BUMP=50, GOAL_BASE=(WC2026.gb??1.32), GOAL_GAMMA=(WC2026.gg??0.23), OF_2026="https://cdn.jsdelivr.net/gh/openfootball/worldcup.json@master/2026/worldcup.json";
+const FIFA_W=0.35;   // how far the forecast anchor is pulled toward the official FIFA ranking (Elo-equivalent fe). 0=pure our-Elo, 1=pure FIFA.
+let FORECAST_LIVE=false;   // flips true once the in-browser sim has re-run from live results, so the CSV export can label itself "live" vs "snapshot".
 const eExp=dr=>1/(Math.pow(10,-dr/400)+1);
 const gMult=gd=>{gd=Math.abs(gd);return gd<=1?1:gd===2?1.5:(11+gd)/8;};
 function assignThirds(qg){
@@ -1051,10 +1054,12 @@ function assignThirds(qg){
   if(bt(0))return res; slots.forEach((m,i)=>res[m]=qg[i]); return res;
 }
 async function recomputeForecast(N, onProgress){
-  const TEAMS=WC2026.teams.map(t=>({name:t.t,confed:t.c,group:t.g,host:!!t.h,e0:t.e0,fm:t.fm,fp:t.fp,fgd:t.fgd,mt:t.mt}));
+  const TEAMS=WC2026.teams.map(t=>({name:t.t,confed:t.c,group:t.g,host:!!t.h,e0:t.e0,fm:t.fm,fp:t.fp,fgd:t.fgd,mt:t.mt,fr:t.fr,fpt:t.fpt,fe:t.fe}));
   const HOSTS=new Set(TEAMS.filter(t=>t.host).map(t=>t.name));
   const GROUPS={}; TEAMS.forEach(t=>{(GROUPS[t.group]=GROUPS[t.group]||[]).push(t.name);});
-  const liveElo={}; TEAMS.forEach(t=>liveElo[t.name]=t.e0);
+  const liveElo={}; TEAMS.forEach(t=>liveElo[t.name]=t.e0);          // pure World-Football Elo, evolves from results (shown as "live Elo")
+  const feOf={}; TEAMS.forEach(t=>feOf[t.name]=(t.fe!=null?t.fe:t.e0)); // FIFA-equivalent Elo (frozen for the tournament)
+  const RAT=name=>(1-FIFA_W)*liveElo[name]+FIFA_W*feOf[name];        // strength anchor used by the sim = blend of our live Elo and the official FIFA ranking
   const LIVE=await fetch(OF_2026,{cache:"no-store"}).then(r=>r.json());
   LIVE.matches=await mergeEspnLive(LIVE.matches||[], true);   // condition the forecast on ESPN finals (fresher than openfootball)
   const isPlayed=m=>{const s=m.score;return !!(s&&s.ft&&s.ft.length===2&&s.ft[0]!=null);};
@@ -1092,9 +1097,9 @@ async function recomputeForecast(N, onProgress){
     for(const k in cardBy){ const p=cardBy[k];
       if(p.R>0 || p.Y>=2) susp[p.team] = Math.min(30, (susp[p.team]||0) + Math.min(22, 6 + 6*Math.min(goalsBy[p.name]||0, 3))); } }
   const pois=lam=>{const L=Math.exp(-lam);let k=0,p=1;do{k++;p*=Math.random();}while(p>L);return k-1;};
-  const simGoals=(ta,tb)=>{const dr=((liveElo[ta]-(susp[ta]||0))+(HOSTS.has(ta)?HOST_BUMP:0))-((liveElo[tb]-(susp[tb]||0))+(HOSTS.has(tb)?HOST_BUMP:0));
+  const simGoals=(ta,tb)=>{const dr=((RAT(ta)-(susp[ta]||0))+(HOSTS.has(ta)?HOST_BUMP:0))-((RAT(tb)-(susp[tb]||0))+(HOSTS.has(tb)?HOST_BUMP:0));
     return [pois(Math.min(6,Math.max(0.05,GOAL_BASE*Math.pow(10,GOAL_GAMMA*dr/400)))),pois(Math.min(6,Math.max(0.05,GOAL_BASE*Math.pow(10,-GOAL_GAMMA*dr/400))))];};
-  const koW=(ta,tb)=>{const dr=(liveElo[ta]+(HOSTS.has(ta)?HOST_BUMP:0))-(liveElo[tb]+(HOSTS.has(tb)?HOST_BUMP:0));return Math.random()<eExp(dr)?ta:tb;};
+  const koW=(ta,tb)=>{const dr=(RAT(ta)+(HOSTS.has(ta)?HOST_BUMP:0))-(RAT(tb)+(HOSTS.has(tb)?HOST_BUMP:0));return Math.random()<eExp(dr)?ta:tb;};
   const lock=(m,ta,tb)=> koWin[m] && ((ta===koWin[m][1]&&tb===koWin[m][2])||(ta===koWin[m][2]&&tb===koWin[m][1])) ? koWin[m][0] : null;
   const reach={}, winGroup={}; TEAMS.forEach(t=>{reach[t.name]={knockout:0,r16:0,quarter:0,semi:0,final:0,title:0};winGroup[t.name]=0;});
   function one(){
@@ -1129,7 +1134,8 @@ async function recomputeForecast(N, onProgress){
   const teams=TEAMS.map(t=>({t:t.name,c:t.confed,g:t.group,e:Math.round(liveElo[t.name]),e0:Math.round(t.e0),h:t.host?1:0,
     pl:cur[t.name][0],pts:cur[t.name][1],gd:cur[t.name][2]-cur[t.name][3],
     fm:t.fm,fp:t.fp,fgd:t.fgd,mt:t.mt,
-    wg:winGroup[t.name]/N,ko:reach[t.name].knockout/N,qf:reach[t.name].quarter/N,sf:reach[t.name].semi/N,fn:reach[t.name].final/N,ti:reach[t.name].title/N
+    wg:winGroup[t.name]/N,ko:reach[t.name].knockout/N,r16:reach[t.name].r16/N,qf:reach[t.name].quarter/N,sf:reach[t.name].semi/N,fn:reach[t.name].final/N,ti:reach[t.name].title/N,
+    fr:t.fr,fpt:t.fpt,fe:t.fe
   })).sort((a,b)=>b.ti-a.ti);
   const avgQ=TEAMS.reduce((s,t)=>s+reach[t.name].knockout,0)/N;
   const playedAll=LIVE.matches.filter(isPlayed).length, totalAll=LIVE.matches.length;
@@ -1144,6 +1150,7 @@ function wireForecastRefresh(){
       const res=await recomputeForecast(30000, p=>{ status.textContent="Running 30,000 simulations… "+Math.round(p*100)+"%"; });
       WC2026.sims=res.sims; WC2026.asOf=res.asOf; WC2026.played=res.played; WC2026.total=res.total;
       WC2026.playedAll=res.playedAll; WC2026.totalAll=res.totalAll; WC2026.teams=res.teams;
+      FORECAST_LIVE=true;   // the on-screen + exported forecast now reflect live results, not the build snapshot
       document.getElementById("liveTag").textContent="Live · "+WC2026.asOf;
       app.innerHTML=forecastHTML(); animateIn(); wireForecastRefresh();
       const s2=document.getElementById("fcRefreshStatus");
@@ -1346,11 +1353,14 @@ async function loadLiveScores(){
     return rows.length;
   }
   function exportForecast(){
+    const state=FORECAST_LIVE?"live":"snapshot";
     const rows=WC2026.teams.slice().sort((a,b)=>b.ti-a.ti).map((t,i)=>({rank:i+1, team:t.t, confederation:t.c, group:t.g,
-      elo:t.e, host:!!t.h, played:t.pl, points:t.pts, goal_diff:t.gd, p_win_group:t.wg, p_reach_knockout:t.ko,
+      data_state:state, as_of:WC2026.asOf,
+      fifa_rank:t.fr??"", fifa_points:t.fpt??"", fifa_elo_equiv:t.fe??"", elo_live:t.e, elo_pre:t.e0, host:!!t.h,
+      played:t.pl, points:t.pts, goal_diff:t.gd, p_win_group:t.wg, p_reach_knockout:t.ko,
       p_quarterfinal:t.qf, p_semifinal:t.sf, p_final:t.fn, p_title:t.ti}));
-    download(`wc2026_live_forecast_${WC2026.asOf}.csv`,
-      toCSV(["rank","team","confederation","group","elo","host","played","points","goal_diff","p_win_group","p_reach_knockout","p_quarterfinal","p_semifinal","p_final","p_title"],rows));
+    download(`wc2026_${state}_forecast_${WC2026.asOf}.csv`,
+      toCSV(["rank","team","confederation","group","data_state","as_of","fifa_rank","fifa_points","fifa_elo_equiv","elo_live","elo_pre","host","played","points","goal_diff","p_win_group","p_reach_knockout","p_quarterfinal","p_semifinal","p_final","p_title"],rows));
     return rows.length;
   }
   const xbtn=document.getElementById("exportBtn"), xmenu=document.getElementById("xmenu"), xstatus=document.getElementById("xstatus");
