@@ -74,6 +74,24 @@ Two independent ways to refresh after matches are played:
   friendlies and minor-confederation qualifiers, so those CSV columns are empty by design. The
   highest-signal free feature — Elo — is provided instead.
 
+## Making it more accurate (all €0)
+
+- **Calibrated goal model** — the two goal-model constants are not guessed; the pipeline MLE-fits
+  them to the recent competitive scorelines it already downloads (no new data). Each side's expected
+  goals scale with the Elo gap, so real blowouts are possible.
+- **Manual strength overrides** (`data/adjustments.json`) — fold in two signals Elo can't see, by
+  hand, for free. Copy [`data/adjustments.example.json`](data/adjustments.example.json) to
+  `data/adjustments.json` and edit:
+  - **Squad value** — paste ~48 squad market-value figures from Transfermarkt's public "most valuable
+    national teams" page (no scraping). They're z-scored into an Elo adjustment.
+  - **Injuries / suspensions / judgement** — a direct per-team Elo nudge (e.g. `-30` for a key player out).
+  Overrides are applied at freeze time, so they flow through the simulation, the embedded numbers
+  **and** the in-browser refresh. No file → no change.
+- **Bookmaker-odds blend** (not wired in — needs a free account I can't create for you) — the single
+  biggest lever. Sign up for a free odds-API key (e.g. the-odds-api free tier, ~500 calls/month is
+  plenty for a tournament), de-vig the WC2026 match prices, and blend `p = w·p_market + (1−w)·p_elo`.
+  The hook would live next to the Elo freeze; ask and it can be added once you have a key.
+
 ## Data sources & credits
 
 - **[openfootball/worldcup.json](https://github.com/openfootball/worldcup.json)** — historical

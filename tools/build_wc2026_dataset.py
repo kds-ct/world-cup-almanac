@@ -87,6 +87,7 @@ rows.sort(key=lambda r: r["date"])
 elo = defaultdict(lambda: 1500.0)
 elo_pre = None                       # snapshot of ratings as of WINDOW_END (pre-tournament)
 form_hist = defaultdict(list)        # canonical team -> [(date, W/D/L, goal_diff)] chronological
+calib = []                           # (rating_gap_incl_home, home_goals, away_goals) for goal-model MLE
 match_log = []   # window matches with pre-match ratings captured
 for r in rows:
     if elo_pre is None and r["date"] > WINDOW_END:
@@ -109,12 +110,37 @@ for r in rows:
         cn = canon(tm)
         if cn in QUALIFIED:
             form_hist[cn].append((r["date"], "W" if gf > ga else "D" if gf == ga else "L", gf - ga))
+    if r["date"] >= "2010-01-01" and K >= 40:            # recent competitive games -> goal-model calibration set
+        calib.append(((rh + ha) - ra, hs, as_))
     elo[h] = rh + delta
     elo[a] = ra - delta
 
 # pre-tournament rating per nation = rating after its last match on/before WINDOW_END
 if elo_pre is None: elo_pre = dict(elo)
 final_elo = {n: elo_pre.get(TO_MART[n], 1500.0) for n in UNIVERSE}
+
+# ---- optional, free, MANUAL strength overrides (squad value #2 + injuries #4) ----
+# Drop a data/adjustments.json (see data/adjustments.example.json) to nudge ratings at freeze time.
+# Applied here so the change flows through everything: the sim, the embedded numbers, and the
+# in-browser "Refresh" button (which reuses the frozen Elo). Absent file -> no change.
+ADJ = {}
+_adj = os.path.join(OUT, "adjustments.json")
+if os.path.exists(_adj):
+    try: cfg = json.load(open(_adj, encoding="utf-8"))
+    except Exception: cfg = {}
+    sv = {n: v for n, v in (cfg.get("squad_value_eur_m") or {}).items() if n in QUALIFIED and v and v > 0}
+    if len(sv) >= 8:                                  # z-score squad value -> Elo, spread over `span`
+        lv = {n: math.log(v) for n, v in sv.items()}
+        mu = sum(lv.values()) / len(lv)
+        sd = (sum((x - mu) ** 2 for x in lv.values()) / len(lv)) ** 0.5 or 1.0
+        span = float(cfg.get("squad_value_elo_span", 120))
+        for n, x in lv.items(): ADJ[n] = ADJ.get(n, 0.0) + (x - mu) / sd * (span / 4)
+    for n, d in (cfg.get("elo_delta") or {}).items():  # direct nudges (injuries / judgement)
+        if n in QUALIFIED:
+            try: ADJ[n] = ADJ.get(n, 0.0) + float(d)
+            except (TypeError, ValueError): pass
+    for n, d in ADJ.items(): final_elo[n] += max(-120.0, min(120.0, d))
+    if ADJ: print(f"applied {len(ADJ)} manual strength overrides from adjustments.json", file=sys.stderr)
 
 # ----------------------------------------------------------------------------- per-team-per-match CSV
 SPEC_COLS = ["date","competition","season","stage","team","confederation","opponent","home_away",
@@ -213,10 +239,26 @@ for n, meta in QUALIFIED.items():
 HOSTS = {"USA", "Canada", "Mexico"}
 HOST_BUMP = 50.0  # modest home advantage for hosts (deliberately < the +100 of a true home match,
                   # since most host games are not in that host's own stadium)
-# Log-linear goal model: each side's expected goals scales with the Elo gap, so mismatches produce
-# MORE total goals (and real blowouts) instead of a fixed 2.65 total. GOAL_BASE = goals/side in an
-# even game; GOAL_GAMMA tunes how fast supremacy grows (kept gentle so win-odds still track Elo).
+# Log-linear goal model: la = GOAL_BASE * 10^(GOAL_GAMMA * dr/400), lb = mirror. Mismatches produce
+# MORE total goals (and real blowouts) instead of a fixed total. The two constants are MLE-fit to the
+# recent competitive scorelines already in memory (no new data) — falling back to these if too few.
 GOAL_BASE, GOAL_GAMMA = 1.32, 0.23
+def _fit_goal_model(samples):
+    if len(samples) < 500: return GOAL_BASE, GOAL_GAMMA
+    samples = samples[-6000:]                                  # most-recent window, bounds runtime
+    best, best_ll = (GOAL_BASE, GOAL_GAMMA), -1e18
+    for bi in range(25):                                       # GOAL_BASE 1.00 .. 1.60
+        B = 1.0 + 0.025 * bi; lnB = math.log(B)
+        for gi in range(35):                                   # GOAL_GAMMA 0.06 .. 0.40
+            Gm = 0.06 + 0.01 * gi; c = Gm * math.log(10) / 400.0
+            ll = 0.0
+            for dr, hg, ag in samples:
+                lla = lnB + c * dr; llb = lnB - c * dr
+                ll += hg * lla - math.exp(lla) + ag * llb - math.exp(llb)
+            if ll > best_ll: best_ll, best = ll, (B, Gm)
+    return best
+GOAL_BASE, GOAL_GAMMA = _fit_goal_model(calib)
+print(f"goal model (MLE on {min(len(calib),6000)} competitive matches): BASE={GOAL_BASE:.3f} GAMMA={GOAL_GAMMA:.3f}", file=sys.stderr)
 
 def pois(lam):
     L = math.exp(-lam); k = 0; p = 1.0
@@ -443,9 +485,9 @@ if os.path.exists(INDEX):
                 pl=t["pl"], pts=t["pts"], gd=t["gd"], fm=json.dumps(t["form"]), fp=t["form_pts"], fgd=t["form_gd"],
                 wg=t["p_win_group"], ko=t["p_knockout"],
                 qf=t["p_quarter"], sf=t["p_semi"], fn=t["p_final"], ti=t["p_title"]) for t in power]
-    const = ("const WC2026={{sims:{s},he:{he},asOf:{a},played:{p},total:{tot},playedAll:{pa},totalAll:{ta},"
+    const = ("const WC2026={{sims:{s},he:{he},gb:{gb:.3f},gg:{gg:.3f},asOf:{a},played:{p},total:{tot},playedAll:{pa},totalAll:{ta},"
              "conf:{{data:{cd},C:{C},R:{Rr},S:{Sr},fs:{fs}}},teams:[\n{rows}\n]}};".format(
-        s=N, he=int(HOST_BUMP), a=json.dumps(AS_OF), p=len(played_g), tot=len(grp_matches),
+        s=N, he=int(HOST_BUMP), gb=GOAL_BASE, gg=GOAL_GAMMA, a=json.dumps(AS_OF), p=len(played_g), tot=len(grp_matches),
         pa=TOTAL_PLAYED, ta=TOTAL_MATCHES, cd=CONF["data"], C=CONF["C"], Rr=CONF["R"], Sr=CONF["S"], fs=CONF["fs"],
         rows=",\n".join(rows_js)))
     html = open(INDEX, encoding="utf-8").read()

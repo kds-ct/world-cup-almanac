@@ -1,0 +1,28 @@
+{
+  "_README": "Optional, free, MANUAL strength overrides. Copy this file to data/adjustments.json and edit, then re-run tools/build_wc2026_dataset.py. Everything is €0 and transparent. Absent file = no change. Use team names exactly as in data/wc2026_power.json (e.g. 'United States' is 'USA', 'Czech Republic', 'Ivory Coast').",
+
+  "squad_value_eur_m": {
+    "_README": "Squad #2: total squad market value in € millions, copied by hand from Transfermarkt's public 'most valuable national teams' page (no scraping needed — it's ~48 numbers). Z-scored across the teams you list and spread over squad_value_elo_span Elo points. List at least 8 teams to activate.",
+    "France": 1100,
+    "England": 1300,
+    "Spain": 1000,
+    "Portugal": 900,
+    "Germany": 850,
+    "Brazil": 1050,
+    "Argentina": 700,
+    "Netherlands": 750
+  },
+  "squad_value_elo_span": 120,
+
+  "elo_delta": {
+    "_README": "Injuries/suspensions #4 (or any judgement call): a direct Elo nudge per team, applied on top of squad value. Negative = weaker. Example scale: a confirmed top scorer or first-choice keeper out ≈ -20 to -40.",
+    "Germany": -25,
+    "Morocco": 12
+  },
+
+  "notes": {
+    "_README": "Free-text reasons for the deltas above — for your own transparency; not used by the model.",
+    "Germany": "first-choice goalkeeper ruled out",
+    "Morocco": "key striker back from injury"
+  }
+}
