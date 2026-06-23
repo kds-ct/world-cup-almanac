@@ -1,0 +1,8 @@
+# The pipeline (tools/build_wc2026_dataset.py) uses only the Python standard library.
+# Nothing is required to run it.
+#
+# Optional: install certifi ONLY if your Python install is missing root CA
+# certificates (you'll see an SSL CERTIFICATE_VERIFY_FAILED error). The script
+# auto-detects and uses it if present.
+#
+#   pip install certifi
