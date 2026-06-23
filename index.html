@@ -961,6 +961,20 @@ function forecastHTML(){
     <div style="width:148px;height:148px;border-radius:50%;background:conic-gradient(${segs.join(",")});flex:none;position:relative"><div style="position:absolute;inset:33px;border-radius:50%;background:var(--panel);display:flex;align-items:center;justify-content:center;flex-direction:column"><span style="font-family:'Bebas Neue';font-size:30px;line-height:1">${confEnt.length}</span><span style="font-size:9px;letter-spacing:.14em;color:var(--muted)">CONFEDS</span></div></div>
     <div class="legend">${confEnt.map(([k,v])=>`<div class="row"><span class="sw" style="background:${COL[k]||"#888"}"></span>${escapeHtml(k)}<span class="n">${fpct(v)}</span></div>`).join("")}</div></div></section>`;
 
+  /* Strength ranking — by World-Football Elo (the same Elo method FIFA's official ranking uses) */
+  const ranked=T.slice().sort((a,b)=>b.e0-a.e0);
+  html+=`<section class="panel col-12 reveal"><div class="phead"><h2>Strength Ranking</h2><span class="meta">pre-tournament Elo · FIFA's ranking uses the same Elo method</span></div>
+    <div class="groups" style="grid-template-columns:repeat(auto-fit,minmax(225px,1fr))">`;
+  ranked.forEach((t,i)=>{ const mom=Math.round((t.e||0)-(t.e0||0));
+    html+=`<div style="display:grid;grid-template-columns:24px 22px 1fr auto auto;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid var(--line)">
+      <span class="pts" style="font-size:13px;color:var(--muted)">${i+1}</span>${flag(t.t,"flag sm")}
+      <span class="nm" style="font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t.t)}</span>
+      <span style="font-family:'Bebas Neue';font-size:16px">${Math.round(t.e0)}</span>
+      <span style="font-size:9.5px;color:${mom>0?'var(--grass)':mom<0?'var(--red)':'var(--muted2)'};min-width:28px;text-align:right" title="live Elo change during the tournament">${mom>0?'▲':mom<0?'▼':'■'}${Math.abs(mom)}</span></div>`; });
+  html+=`</div>
+    <p class="note" style="margin-top:12px">These are our <b style="color:var(--ink)">World-Football Elo</b> ratings at kick-off, computed from every international since 1872 — and they're already the backbone of every forecast number above. FIFA's official ranking runs on the <i>same Elo formula</i>, so this is a live stand-in for it; the ▲▼ shows how each rating has shifted during the tournament. <span style="color:var(--muted2)">(The exact official FIFA points have no free live API and are frozen during the World Cup — they can be pasted in once if you want the precise figures shown.)</span></p>
+  </section>`;
+
   /* Road to the final — nested survival funnel */
   const funnel=byTitle.slice(0,12);
   html+=`<section class="panel col-12 reveal"><div class="phead"><h2>Road to the Final</h2><span class="meta">survival probability by round</span></div>
