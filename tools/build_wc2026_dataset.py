@@ -50,6 +50,7 @@ TEAMS = fetch(TEAMS_URL)                       # the ACTUAL qualified 48
 QUALIFIED = {t["name"]: {"confed": t["confed"], "group": t["group"], "code": t["fifa_code"]} for t in TEAMS}
 # friend's provisional list extras that did NOT actually qualify — kept (flagged) so his pipeline runs
 EXTRAS = {"China": "AFC", "Indonesia": "AFC", "Bolivia": "CONMEBOL", "Cameroon": "CAF", "Nigeria": "CAF"}
+HOSTS = {"USA", "Canada", "Mexico"}
 UNIVERSE = dict(QUALIFIED)
 for n, c in EXTRAS.items():
     UNIVERSE.setdefault(n, {"confed": c, "group": None, "code": ""})
@@ -148,36 +149,66 @@ if os.path.exists(_adj):
 # committed or sent to the browser); only our Elo-derived forecast is published, not the raw odds.
 #   run with:  ODDS_API_KEY=xxxxx python3 tools/build_wc2026_dataset.py
 MARKET_BLEND = None
+MKT_TITLE = {}                      # canonical team -> de-vigged market P(title)
+ODDS_ROWS = []                      # rows for data/wc2026_odds.csv
 ODDS_KEY = os.environ.get("ODDS_API_KEY")
+def _devig(outcomes):
+    ocs = [o for o in outcomes if o.get("price", 0) > 0]
+    tot = sum(1.0 / o["price"] for o in ocs)
+    return {o["name"].strip(): ((1.0 / o["price"]) / tot, o["price"]) for o in ocs} if tot > 0 else {}
 if ODDS_KEY:
-    try:
-        url = ("https://api.the-odds-api.com/v4/sports/soccer_fifa_world_cup_winner/odds/"
-               "?apiKey=" + ODDS_KEY + "&regions=eu,uk&markets=outrights&oddsFormat=decimal")
-        events = json.loads(fetch(url, raw=True), strict=False)
-        agg = defaultdict(list)
-        for ev in events:
+    base = "https://api.the-odds-api.com/v4/sports/"
+    qs = "/odds/?apiKey=" + ODDS_KEY + "&regions=eu,uk&oddsFormat=decimal&markets="
+    try:   # ---- 1) OUTRIGHT WINNER market -> title prob + strength blend
+        t_p, t_d = defaultdict(list), defaultdict(list)
+        for ev in json.loads(fetch(base + "soccer_fifa_world_cup_winner" + qs + "outrights", raw=True), strict=False):
             for bk in ev.get("bookmakers", []):
                 for mk in bk.get("markets", []):
-                    ocs = [o for o in mk.get("outcomes", []) if o.get("price", 0) > 0]
-                    tot = sum(1.0 / o["price"] for o in ocs)
-                    if tot <= 0: continue
-                    for o in ocs: agg[o["name"].strip()].append((1.0 / o["price"]) / tot)  # de-vig
-        mkt = {n: sum(ps) / len(ps) for n, ps in agg.items() if n in QUALIFIED}   # avg P(title) across books
-        if len(mkt) >= 12:
-            xs = {t: math.log(p) for t, p in mkt.items() if p > 0}      # map market title odds -> Elo units
-            n = len(xs); mx = sum(xs.values()) / n; my = sum(final_elo[t] for t in xs) / n
+                    for nm, (p, dec) in _devig(mk.get("outcomes", [])).items():
+                        t_p[nm].append(p); t_d[nm].append(dec)
+        for nm in t_p:
+            prob = sum(t_p[nm]) / len(t_p[nm])
+            if nm in QUALIFIED: MKT_TITLE[nm] = prob
+            ODDS_ROWS.append(["winner", "", nm, round(sum(t_d[nm]) / len(t_d[nm]), 2), round(prob, 4), len(t_d[nm])])
+        xs = {t: math.log(p) for t, p in MKT_TITLE.items() if p > 0}
+        if len(xs) >= 12:                                          # regress Elo on log market prob, blend
+            nn = len(xs); mx = sum(xs.values()) / nn; my = sum(final_elo[t] for t in xs) / nn
             var = sum((xs[t] - mx) ** 2 for t in xs) or 1.0
-            a = sum((xs[t] - mx) * (final_elo[t] - my) for t in xs) / var
-            b = my - a * mx
-            W = 0.5                                                     # blend weight toward the market
-            for t in xs:
-                final_elo[t] += max(-100.0, min(100.0, W * (a * xs[t] + b - final_elo[t])))
-            MARKET_BLEND = {"w": W, "teams": len(xs)}
-            print(f"market blend: pulled {len(xs)} teams' Elo {int(W*100)}% toward de-vigged title odds", file=sys.stderr)
-        else:
-            print(f"odds blend skipped: only {len(mkt)} teams matched", file=sys.stderr)
+            a = sum((xs[t] - mx) * (final_elo[t] - my) for t in xs) / var; b = my - a * mx
+            W = 0.5
+            for t in xs: final_elo[t] += max(-100.0, min(100.0, W * (a * xs[t] + b - final_elo[t])))
+            MARKET_BLEND = {"w": W, "title_teams": len(xs)}
+            print(f"title-market blend: {len(xs)} teams pulled {int(W*100)}% toward odds", file=sys.stderr)
     except Exception as e:
-        print(f"odds blend skipped ({e})", file=sys.stderr)
+        print(f"title odds skipped ({e})", file=sys.stderr)
+    try:   # ---- 2) MATCH (h2h) market -> per-game odds + light pairwise Elo nudge
+        nudges, games = defaultdict(float), 0
+        for ev in json.loads(fetch(base + "soccer_fifa_world_cup" + qs + "h2h", raw=True), strict=False):
+            h, aw = ev.get("home_team", "").strip(), ev.get("away_team", "").strip()
+            mp, md = defaultdict(list), defaultdict(list)
+            for bk in ev.get("bookmakers", []):
+                for mk in bk.get("markets", []):
+                    for nm, (p, dec) in _devig(mk.get("outcomes", [])).items(): mp[nm].append(p); md[nm].append(dec)
+            P = {nm: sum(v) / len(v) for nm, v in mp.items()}
+            for nm in mp:
+                ODDS_ROWS.append(["match_h2h", h + " v " + aw, nm, round(sum(md[nm]) / len(md[nm]), 2), round(P[nm], 4), len(md[nm])])
+            if h in QUALIFIED and aw in QUALIFIED and P.get(h, 0) > 0 and P.get(aw, 0) > 0:
+                p1 = min(0.99, max(0.01, P[h] / (P[h] + P[aw])))    # 2-way market win prob (home)
+                market_dr = 400 * math.log10(p1 / (1 - p1))
+                model_dr = (final_elo[h] + (50 if h in HOSTS else 0)) - (final_elo[aw] + (50 if aw in HOSTS else 0))
+                d = 0.15 * (market_dr - model_dr); nudges[h] += d / 2; nudges[aw] -= d / 2; games += 1
+        for t, d in nudges.items(): final_elo[t] += max(-40.0, min(40.0, d))
+        if games and MARKET_BLEND is not None: MARKET_BLEND["match_games"] = games
+        print(f"match-odds nudge applied over {games} upcoming games", file=sys.stderr)
+    except Exception as e:
+        print(f"match odds skipped ({e})", file=sys.stderr)
+    if ODDS_ROWS:
+        with open(os.path.join(OUT, "wc2026_odds.csv"), "w", newline="") as f:
+            w = csv.writer(f)
+            w.writerow(["# odds via the-odds-api.com; decimal odds averaged across EU/UK bookmakers; devig = vig-removed probability"])
+            w.writerow(["market", "match", "team_or_outcome", "avg_decimal_odds", "devig_probability", "n_bookmakers"])
+            w.writerows(ODDS_ROWS)
+        print(f"wrote data/wc2026_odds.csv ({len(ODDS_ROWS)} rows)", file=sys.stderr)
 
 # ----------------------------------------------------------------------------- per-team-per-match CSV
 SPEC_COLS = ["date","competition","season","stage","team","confederation","opponent","home_away",
@@ -414,7 +445,7 @@ for m in LIVE["matches"]:
 TOTAL_PLAYED = sum(1 for m in LIVE["matches"] if _played(m))
 TOTAL_MATCHES = len(LIVE["matches"])
 
-N = 30000
+N = 50000
 reach = {n: defaultdict(int) for n in QUALIFIED}   # stage -> count
 win_group = defaultdict(int)
 STAGES = ["knockout","r16","quarter","semi","final","title"]
@@ -480,6 +511,7 @@ for n, meta in QUALIFIED.items():
         "host": n in HOSTS,
         "pl": cur[n][0], "pts": cur[n][1], "gd": cur[n][2]-cur[n][3],
         "form": FORM[n]["fm"], "form_pts": FORM[n]["fp"], "form_gd": FORM[n]["fgd"],
+        "mkt_title": round(MKT_TITLE.get(n, 0), 4),
         "p_win_group": round(win_group[n]/N, 4),
         "p_knockout": round(reach[n]["knockout"]/N, 4),
         "p_r16": round(reach[n]["r16"]/N, 4),
@@ -515,12 +547,12 @@ with open(os.path.join(OUT, "wc2026_power.json"), "w") as f:
 import re
 INDEX = os.path.join(os.path.dirname(HERE), "index.html")
 if os.path.exists(INDEX):
-    rows_js = [("{{t:{t},c:{c},g:{g},e:{e},e0:{e0},h:{h},pl:{pl},pts:{pts},gd:{gd},fm:{fm},fp:{fp},fgd:{fgd},"
+    rows_js = [("{{t:{t},c:{c},g:{g},e:{e},e0:{e0},h:{h},pl:{pl},pts:{pts},gd:{gd},fm:{fm},fp:{fp},fgd:{fgd},mt:{mt:.4f},"
                 "wg:{wg:.3f},ko:{ko:.3f},qf:{qf:.3f},sf:{sf:.3f},fn:{fn:.3f},ti:{ti:.4f}}}").format(
                 t=json.dumps(t["team"], ensure_ascii=False), c=json.dumps(t["confederation"]),
                 g=json.dumps(t["group"]), e=int(t["elo"]), e0=int(t["elo_pre"]), h=1 if t["host"] else 0,
                 pl=t["pl"], pts=t["pts"], gd=t["gd"], fm=json.dumps(t["form"]), fp=t["form_pts"], fgd=t["form_gd"],
-                wg=t["p_win_group"], ko=t["p_knockout"],
+                mt=t["mkt_title"], wg=t["p_win_group"], ko=t["p_knockout"],
                 qf=t["p_quarter"], sf=t["p_semi"], fn=t["p_final"], ti=t["p_title"]) for t in power]
     const = ("const WC2026={{sims:{s},he:{he},gb:{gb:.3f},gg:{gg:.3f},mb:{mb},asOf:{a},played:{p},total:{tot},playedAll:{pa},totalAll:{ta},"
              "conf:{{data:{cd},C:{C},R:{Rr},S:{Sr},fs:{fs}}},teams:[\n{rows}\n]}};".format(

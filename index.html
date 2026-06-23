@@ -259,6 +259,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}
           <button data-x="goals" role="menuitem">All goals<small>one row per goal — scorer, minute, penalty, own-goal</small></button>
           <button data-x="standings" role="menuitem">All group standings<small>computed table for every group, every edition</small></button>
           <button data-x="forecast" role="menuitem">2026 live forecast<small>title odds, road-to-final, current points</small></button>
+          <button data-x="odds" role="menuitem">Market odds<small>de-vigged winner + match odds (via the-odds-api)</small></button>
           <div class="st" id="xstatus">Everything the almanac holds, as CSV.</div>
         </div>
       </div>
@@ -283,16 +284,17 @@ table{width:100%;border-collapse:collapse;font-size:13px}
         <code>Wₑ = 1 / (1 + 10^(−d/400))</code> and <code>d</code> is the rating gap plus a <b>+100 home-field</b> bonus (0 at a neutral venue).
         <code>W</code> is the actual result (1 win / ½ draw / 0 loss). <code>K</code> weights a match by importance — World Cup 60, continental finals 50, World-Cup/continental qualifiers &amp; Nations League 40, minor tournaments 30, friendlies 20 — and <code>G</code> is a margin-of-victory multiplier (1 for a 1-goal win, 1.5 for 2, <code>(11+gd)/8</code> for 3+). We run this over <b>every men's international since 1872</b> (~49,000 matches) to get today's ratings.</p>
         <p><b>2 · Live conditioning.</b> Ratings are frozen the day before the tournament, then nudged by the actual 2026 results as they come in. In the simulation, <b>played group results are locked</b> and only the unplayed fixtures are simulated; once knockout games are played, their winners are locked too.</p>
-        <p><b>3 · The goal model.</b> For each simulated group match, each team's expected goals scale with the rating gap <code>d</code> (including any host bump): <code>λ = 1.32 · 10^(±0.23·d/400)</code>, and the actual goals are drawn from an independent <b>Poisson</b>. Because the exponent works in both directions, a mismatch produces <i>more</i> total goals — and the occasional 4-0 or 5-0 — instead of a fixed-total game, which matches real internationals. Knockout winners are taken straight from the Elo win-probability (penalties make scorelines a poor guide in one-off games).</p>
-        <p><b>4 · The bracket.</b> Top 2 of each group plus the <b>8 best third-placed</b> teams advance (32 of 48), slotted into the <b>official Round-of-32 → Final</b> bracket; hosts (USA/Canada/Mexico) get a +50 Elo home bump in their matches.</p>
+        <p><b>3 · The goal model.</b> For each simulated group match, each team's expected goals scale with the rating gap <code>d</code> (including any host bump): <code>λ = base · 10^(±γ·d/400)</code>, with goals drawn from an independent <b>Poisson</b>. <code>base</code> and <code>γ</code> aren't guessed — they're <b>maximum-likelihood-fit</b> to the recent competitive scorelines we already hold (currently ≈ 1.15 and 0.33). Because the exponent works both ways, a mismatch produces <i>more</i> total goals — and the occasional 4-0 — instead of a fixed-total game. Knockout winners come straight from the Elo win-probability (penalties make scorelines a poor guide in one-off games).</p>
+        <p><b>4 · The bracket.</b> Top 2 of each group plus the <b>8 best third-placed</b> teams advance (32 of 48), slotted into the <b>official Round-of-32 → Final</b> bracket; hosts (USA/Canada/Mexico) get a +50 Elo home bump in their matches. We then run this whole thing <b>50,000 times</b> (30,000 for the in-browser refresh).</p>
+        <p><b>5 · Betting-market blend</b> (when enabled). We pull two de-vigged the-odds-api markets and feed both into the ratings: the <b>outright-winner</b> market is regressed into Elo units and each team is pulled halfway toward it; the <b>match (h2h)</b> odds for upcoming games give an extra pairwise nudge. So the market's read on injuries, form and squad changes flows through every number — title odds, group-stage exit (which is just 1 − reach-knockout), road to the final, all of it. We publish our resulting probabilities, not the raw odds. The Title Odds panel marks the market's number (<span style="color:var(--blue)">▏</span>) next to ours.</p>
       </div>
     </details>
 
     <details class="doc">
       <summary>What is a “Monte-Carlo forecast”?</summary>
       <div class="doc-body">
-        <p>Rather than guess a single outcome, we <b>play out the rest of the tournament 30,000 times</b>. Each match isn't decided by who's “better” — it's a dice roll, but a loaded one: the stronger team (by Elo) is more likely to win, by an amount the maths above sets. Run thousands of these full tournaments and you get thousands of different champions, finalists and group tables.</p>
-        <p>The percentages you see are simply <b>how often</b> each thing happened: if Argentina win the trophy in 8,100 of 30,000 simulated tournaments, that's a 27% title chance. It's named after the Monte-Carlo casino — it uses randomness on purpose. More simulations make the numbers steadier (the wobble shrinks like <code>1/√N</code>), which is exactly what the confidence score below measures.</p>
+        <p>Rather than guess a single outcome, we <b>play out the rest of the tournament 50,000 times</b>. Each match isn't decided by who's “better” — it's a dice roll, but a loaded one: the stronger team (by Elo, now market-informed) is more likely to win, by an amount the maths above sets. Run tens of thousands of these full tournaments and you get tens of thousands of different champions, finalists and group tables.</p>
+        <p>The percentages you see are simply <b>how often</b> each thing happened: if a team wins the trophy in 11,500 of 50,000 simulated tournaments, that's a 23% title chance. It's named after the Monte-Carlo casino — it uses randomness on purpose. More simulations make the numbers steadier (the wobble shrinks like <code>1/√N</code>), which is exactly what the confidence score below measures.</p>
       </div>
     </details>
   </section>
@@ -310,55 +312,55 @@ const DEFUNCT = new Set(["Soviet Union","West Germany","East Germany","Czechoslo
 /* 2026 forecast — World-Football Elo (computed from scratch over all internationals) + Monte-Carlo of the real
    2026 format (12 groups, top-2 + 8 best thirds, official R32→Final bracket). Built by tools/build_wc2026_dataset.py.
    Fields: t=team c=confed g=group e=elo h=host wg=P(win group) ko=P(reach knockout) qf/sf/fn=P(reach QF/SF/Final) ti=P(title). */
-const WC2026={sims:30000,he:50,gb:1.150,gg:0.330,mb:1,asOf:"2026-06-22",played:44,total:72,playedAll:44,totalAll:104,conf:{data:94,C:100,R:100,S:84,fs:31},teams:[
-{t:"Argentina",c:"CONMEBOL",g:"J",e:2184,e0:2155,h:0,pl:2,pts:6,gd:5,fm:"WWWWW",fp:15,fgd:15,wg:0.999,ko:1.000,qf:0.752,sf:0.580,fn:0.376,ti:0.2376},
-{t:"Spain",c:"UEFA",g:"H",e:2157,e0:2173,h:0,pl:2,pts:4,gd:4,fm:"DDWDW",fp:9,fgd:6,wg:0.883,ko:1.000,qf:0.605,sf:0.446,fn:0.275,ti:0.1581},
-{t:"France",c:"UEFA",g:"I",e:2162,e0:2137,h:0,pl:2,pts:6,gd:5,fm:"WLWWW",fp:12,fgd:8,wg:0.776,ko:1.000,qf:0.576,sf:0.400,fn:0.248,ti:0.1451},
-{t:"England",c:"UEFA",g:"L",e:2129,e0:2106,h:0,pl:1,pts:3,gd:2,fm:"DLWWW",fp:10,fgd:5,wg:0.927,ko:0.999,qf:0.528,sf:0.328,fn:0.179,ti:0.0983},
-{t:"Germany",c:"UEFA",g:"E",e:2066,e0:2034,h:0,pl:2,pts:6,gd:7,fm:"WWWWW",fp:15,fgd:13,wg:0.999,ko:1.000,qf:0.364,sf:0.217,fn:0.108,ti:0.0480},
-{t:"USA",c:"CONCACAF",g:"D",e:1989,e0:1917,h:1,pl:2,pts:6,gd:5,fm:"LWLWW",fp:9,fgd:3,wg:0.997,ko:1.000,qf:0.602,sf:0.269,fn:0.123,ti:0.0474},
-{t:"Brazil",c:"CONMEBOL",g:"C",e:2069,e0:2065,h:0,pl:2,pts:4,gd:3,fm:"WWWDW",fp:13,fgd:10,wg:0.633,ko:1.000,qf:0.342,sf:0.169,fn:0.081,ti:0.0377},
-{t:"Netherlands",c:"UEFA",g:"F",e:2059,e0:2033,h:0,pl:2,pts:4,gd:4,fm:"DLWDW",fp:8,fgd:4,wg:0.690,ko:1.000,qf:0.360,sf:0.167,fn:0.080,ti:0.0363},
-{t:"Mexico",c:"CONCACAF",g:"A",e:1997,e0:1966,h:1,pl:2,pts:6,gd:3,fm:"WWWWW",fp:15,fgd:10,wg:0.964,ko:1.000,qf:0.340,sf:0.170,fn:0.074,ti:0.0327},
-{t:"Colombia",c:"CONMEBOL",g:"K",e:2034,e0:2015,h:0,pl:1,pts:3,gd:2,fm:"LLWWW",fp:9,fgd:3,wg:0.630,ko:0.988,qf:0.427,sf:0.179,fn:0.080,ti:0.0326},
-{t:"Portugal",c:"UEFA",g:"K",e:2043,e0:2064,h:0,pl:1,pts:1,gd:0,fm:"DWWWD",fp:11,fgd:4,wg:0.293,ko:0.867,qf:0.326,sf:0.158,fn:0.072,ti:0.0306},
-{t:"Norway",c:"UEFA",g:"I",e:2027,e0:1988,h:0,pl:2,pts:6,gd:4,fm:"DWDWW",fp:11,fgd:6,wg:0.224,ko:1.000,qf:0.365,sf:0.169,fn:0.070,ti:0.0279},
-{t:"Morocco",c:"CAF",g:"C",e:2012,e0:1987,h:0,pl:2,pts:4,gd:1,fm:"WWDDW",fp:11,fgd:10,wg:0.330,ko:1.000,qf:0.283,sf:0.115,fn:0.048,ti:0.0172},
-{t:"Japan",c:"AFC",g:"F",e:2007,e0:1986,h:0,pl:2,pts:4,gd:4,fm:"WWWDW",fp:13,fgd:7,wg:0.272,ko:1.000,qf:0.247,sf:0.100,fn:0.039,ti:0.0156},
-{t:"Canada",c:"CONCACAF",g:"B",e:1890,e0:1881,h:1,pl:2,pts:4,gd:6,fm:"DWDDW",fp:9,fgd:8,wg:0.642,ko:1.000,qf:0.257,sf:0.074,fn:0.025,ti:0.0068},
-{t:"Switzerland",c:"UEFA",g:"B",e:1942,e0:1936,h:0,pl:2,pts:4,gd:3,fm:"DWDDW",fp:9,fgd:6,wg:0.358,ko:1.000,qf:0.261,sf:0.077,fn:0.026,ti:0.0068},
-{t:"Belgium",c:"UEFA",g:"G",e:1939,e0:1960,h:0,pl:2,pts:2,gd:0,fm:"DWWDD",fp:9,fgd:7,wg:0.144,ko:0.844,qf:0.139,sf:0.057,fn:0.018,ti:0.0048},
-{t:"Austria",c:"UEFA",g:"J",e:1878,e0:1859,h:0,pl:2,pts:3,gd:0,fm:"WWWWL",fp:12,fgd:6,wg:0.001,ko:0.967,qf:0.103,sf:0.034,fn:0.010,ti:0.0025},
-{t:"Australia",c:"AFC",g:"D",e:1894,e0:1872,h:0,pl:2,pts:3,gd:0,fm:"WLDWL",fp:7,fgd:3,wg:0.003,ko:0.947,qf:0.090,sf:0.034,fn:0.009,ti:0.0024},
-{t:"Egypt",c:"CAF",g:"G",e:1874,e0:1829,h:0,pl:2,pts:4,gd:2,fm:"DWLDW",fp:8,fgd:2,wg:0.635,ko:1.000,qf:0.152,sf:0.042,fn:0.011,ti:0.0023},
-{t:"Croatia",c:"UEFA",g:"L",e:1901,e0:1924,h:0,pl:1,pts:0,gd:-2,fm:"WLLWL",fp:6,fgd:-4,wg:0.020,ko:0.732,qf:0.102,sf:0.036,fn:0.010,ti:0.0021},
-{t:"South Korea",c:"AFC",g:"A",e:1861,e0:1854,h:0,pl:2,pts:3,gd:0,fm:"LWWWL",fp:9,fgd:5,wg:0.036,ko:0.954,qf:0.107,sf:0.025,fn:0.006,ti:0.0012},
-{t:"Ivory Coast",c:"CAF",g:"E",e:1865,e0:1844,h:0,pl:2,pts:3,gd:0,fm:"WWWWL",fp:12,fgd:6,wg:0.001,ko:0.948,qf:0.074,sf:0.017,fn:0.004,ti:0.0008},
-{t:"Paraguay",c:"CONMEBOL",g:"D",e:1860,e0:1859,h:0,pl:2,pts:3,gd:-2,fm:"WLWLW",fp:9,fgd:2,wg:0.000,ko:0.810,qf:0.053,sf:0.017,fn:0.004,ti:0.0007},
-{t:"Uruguay",c:"CONMEBOL",g:"H",e:1872,e0:1898,h:0,pl:2,pts:2,gd:0,fm:"LDDDD",fp:4,fgd:-4,wg:0.097,ko:0.378,qf:0.048,sf:0.015,fn:0.003,ti:0.0007},
-{t:"Senegal",c:"CAF",g:"I",e:1854,e0:1890,h:0,pl:2,pts:0,gd:-3,fm:"WLDLL",fp:4,fgd:-2,wg:0.000,ko:0.486,qf:0.053,sf:0.012,fn:0.003,ti:0.0007},
-{t:"Algeria",c:"CAF",g:"J",e:1840,e0:1831,h:0,pl:2,pts:3,gd:-2,fm:"DWWLW",fp:10,fgd:3,wg:0.000,ko:0.846,qf:0.080,sf:0.019,fn:0.004,ti:0.0007},
-{t:"Sweden",c:"UEFA",g:"F",e:1822,e0:1807,h:0,pl:2,pts:3,gd:0,fm:"WLDWL",fp:7,fgd:-1,wg:0.038,ko:0.954,qf:0.057,sf:0.013,fn:0.003,ti:0.0006},
-{t:"Iran",c:"AFC",g:"G",e:1835,e0:1832,h:0,pl:2,pts:2,gd:0,fm:"WWWDD",fp:11,fgd:9,wg:0.221,ko:0.648,qf:0.069,sf:0.015,fn:0.003,ti:0.0005},
-{t:"Scotland",c:"UEFA",g:"C",e:1824,e0:1821,h:0,pl:2,pts:3,gd:0,fm:"LWWWL",fp:9,fgd:6,wg:0.036,ko:0.870,qf:0.043,sf:0.011,fn:0.002,ti:0.0004},
-{t:"Ecuador",c:"CONMEBOL",g:"E",e:1874,e0:1928,h:0,pl:2,pts:1,gd:-1,fm:"DWWLD",fp:8,fgd:3,wg:0.000,ko:0.197,qf:0.023,sf:0.006,fn:0.001,ti:0.0003},
-{t:"Turkey",c:"UEFA",g:"D",e:1872,e0:1966,h:0,pl:2,pts:0,gd:-3,fm:"WWWLL",fp:9,fgd:3,wg:0.000,ko:0.087,qf:0.006,sf:0.002,fn:0.001,ti:0.0001},
-{t:"Cape Verde",c:"CAF",g:"H",e:1747,e0:1708,h:0,pl:2,pts:2,gd:0,fm:"DWLDD",fp:6,fgd:0,wg:0.019,ko:0.679,qf:0.019,sf:0.004,fn:0.001,ti:0.0001},
-{t:"DR Congo",c:"CAF",g:"K",e:1786,e0:1765,h:0,pl:1,pts:1,gd:0,fm:"WWDLD",fp:8,fgd:2,wg:0.064,ko:0.548,qf:0.034,sf:0.007,fn:0.001,ti:0.0001},
-{t:"Uzbekistan",c:"AFC",g:"K",e:1768,e0:1787,h:0,pl:1,pts:0,gd:-2,fm:"WDLLL",fp:4,fgd:-3,wg:0.013,ko:0.329,qf:0.015,sf:0.003,fn:0.001,ti:0.0001},
-{t:"South Africa",c:"CAF",g:"A",e:1701,e0:1708,h:0,pl:2,pts:1,gd:-2,fm:"LDWLD",fp:5,fgd:-2,wg:0.000,ko:0.209,qf:0.006,sf:0.001,fn:0.000,ti:0.0000},
-{t:"Czech Republic",c:"UEFA",g:"A",e:1759,e0:1790,h:0,pl:2,pts:1,gd:-1,fm:"DWWLD",fp:8,fgd:4,wg:0.000,ko:0.139,qf:0.007,sf:0.001,fn:0.000,ti:0.0000},
-{t:"Bosnia & Herzegovina",c:"UEFA",g:"B",e:1704,e0:1715,h:0,pl:2,pts:1,gd:-3,fm:"DDDDL",fp:4,fgd:-3,wg:0.000,ko:0.425,qf:0.011,sf:0.002,fn:0.000,ti:0.0000},
-{t:"Qatar",c:"AFC",g:"B",e:1649,e0:1654,h:0,pl:2,pts:1,gd:-6,fm:"LLDDL",fp:2,fgd:-10,wg:0.000,ko:0.302,qf:0.006,sf:0.001,fn:0.000,ti:0.0000},
-{t:"Haiti",c:"CONCACAF",g:"C",e:1676,e0:1707,h:0,pl:2,pts:0,gd:-4,fm:"DWLLL",fp:4,fgd:-1,wg:0.000,ko:0.014,qf:0.000,sf:0.000,fn:0.000,ti:0.0000},
-{t:"Curaçao",c:"CONCACAF",g:"E",e:1684,e0:1682,h:0,pl:2,pts:1,gd:-6,fm:"LLWLD",fp:4,fgd:-9,wg:0.000,ko:0.186,qf:0.003,sf:0.000,fn:0.000,ti:0.0000},
-{t:"Tunisia",c:"CAF",g:"F",e:1672,e0:1733,h:0,pl:2,pts:0,gd:-8,fm:"DLLLL",fp:1,fgd:-14,wg:0.000,ko:0.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000},
-{t:"New Zealand",c:"OFC",g:"G",e:1718,e0:1744,h:0,pl:2,pts:1,gd:-2,fm:"WLLDL",fp:4,fgd:-4,wg:0.000,ko:0.164,qf:0.004,sf:0.001,fn:0.000,ti:0.0000},
-{t:"Saudi Arabia",c:"AFC",g:"H",e:1731,e0:1727,h:0,pl:2,pts:1,gd:-4,fm:"LWDDL",fp:5,fgd:-2,wg:0.000,ko:0.338,qf:0.008,sf:0.002,fn:0.000,ti:0.0000},
-{t:"Iraq",c:"AFC",g:"I",e:1712,e0:1741,h:0,pl:2,pts:0,gd:-6,fm:"WDLLL",fp:4,fgd:-7,wg:0.000,ko:0.104,qf:0.004,sf:0.001,fn:0.000,ti:0.0000},
-{t:"Jordan",c:"AFC",g:"J",e:1717,e0:1774,h:0,pl:2,pts:0,gd:-3,fm:"DLLLL",fp:1,fgd:-8,wg:0.000,ko:0.019,qf:0.001,sf:0.000,fn:0.000,ti:0.0000},
-{t:"Ghana",c:"CAF",g:"L",e:1746,e0:1708,h:0,pl:1,pts:3,gd:1,fm:"LLLDW",fp:4,fgd:-6,wg:0.049,ko:0.807,qf:0.036,sf:0.006,fn:0.001,ti:0.0000},
-{t:"Panama",c:"CONCACAF",g:"L",e:1766,e0:1804,h:0,pl:1,pts:0,gd:-1,fm:"WLWDL",fp:7,fgd:-2,wg:0.004,ko:0.216,qf:0.011,sf:0.002,fn:0.000,ti:0.0000}
+const WC2026={sims:50000,he:50,gb:1.150,gg:0.330,mb:1,asOf:"2026-06-22",played:43,total:72,playedAll:43,totalAll:104,conf:{data:94,C:100,R:100,S:84,fs:31},teams:[
+{t:"Argentina",c:"CONMEBOL",g:"J",e:2188,e0:2159,h:0,pl:2,pts:6,gd:5,fm:"WWWWW",fp:15,fgd:15,mt:0.1246,wg:0.998,ko:1.000,qf:0.749,sf:0.574,fn:0.371,ti:0.2336},
+{t:"Spain",c:"UEFA",g:"H",e:2156,e0:2173,h:0,pl:2,pts:4,gd:4,fm:"DDWDW",fp:9,fgd:6,mt:0.1387,wg:0.883,ko:1.000,qf:0.592,sf:0.428,fn:0.261,ti:0.1467},
+{t:"France",c:"UEFA",g:"I",e:2166,e0:2140,h:0,pl:2,pts:6,gd:5,fm:"WLWWW",fp:12,fgd:8,mt:0.1835,wg:0.783,ko:1.000,qf:0.574,sf:0.395,fn:0.246,ti:0.1446},
+{t:"England",c:"UEFA",g:"L",e:2142,e0:2119,h:0,pl:1,pts:3,gd:2,fm:"DLWWW",fp:10,fgd:5,mt:0.1261,wg:0.937,ko:0.999,qf:0.553,sf:0.353,fn:0.196,ti:0.1107},
+{t:"USA",c:"CONCACAF",g:"D",e:1995,e0:1925,h:1,pl:2,pts:6,gd:5,fm:"LWLWW",fp:9,fgd:3,mt:0.0262,wg:0.997,ko:1.000,qf:0.599,sf:0.274,fn:0.125,ti:0.0517},
+{t:"Germany",c:"UEFA",g:"E",e:2066,e0:2035,h:0,pl:2,pts:6,gd:7,fm:"WWWWW",fp:15,fgd:13,mt:0.0582,wg:0.999,ko:1.000,qf:0.363,sf:0.211,fn:0.105,ti:0.0451},
+{t:"Portugal",c:"UEFA",g:"K",e:2069,e0:2091,h:0,pl:1,pts:1,gd:0,fm:"DWWWD",fp:11,fgd:4,mt:0.0782,wg:0.342,ko:0.903,qf:0.382,sf:0.195,fn:0.095,ti:0.0433},
+{t:"Netherlands",c:"UEFA",g:"F",e:2072,e0:2049,h:0,pl:2,pts:4,gd:4,fm:"DLWDW",fp:8,fgd:4,mt:0.0520,wg:0.711,ko:1.000,qf:0.385,sf:0.183,fn:0.091,ti:0.0394},
+{t:"Brazil",c:"CONMEBOL",g:"C",e:2073,e0:2069,h:0,pl:2,pts:4,gd:3,fm:"WWWDW",fp:13,fgd:10,mt:0.0495,wg:0.622,ko:1.000,qf:0.343,sf:0.171,fn:0.079,ti:0.0358},
+{t:"Colombia",c:"CONMEBOL",g:"K",e:2028,e0:2012,h:0,pl:1,pts:3,gd:2,fm:"LLWWW",fp:9,fgd:3,mt:0.0149,wg:0.579,ko:0.989,qf:0.406,sf:0.171,fn:0.073,ti:0.0288},
+{t:"Mexico",c:"CONCACAF",g:"A",e:1989,e0:1957,h:1,pl:2,pts:6,gd:3,fm:"WWWWW",fp:15,fgd:10,mt:0.0123,wg:0.961,ko:1.000,qf:0.309,sf:0.151,fn:0.062,ti:0.0253},
+{t:"Norway",c:"UEFA",g:"I",e:2024,e0:1984,h:0,pl:2,pts:6,gd:4,fm:"DWDWW",fp:11,fgd:6,mt:0.0259,wg:0.217,ko:1.000,qf:0.343,sf:0.152,fn:0.062,ti:0.0246},
+{t:"Morocco",c:"CAF",g:"C",e:2024,e0:2002,h:0,pl:2,pts:4,gd:1,fm:"WWDDW",fp:11,fgd:10,mt:0.0207,wg:0.348,ko:1.000,qf:0.292,sf:0.122,fn:0.053,ti:0.0207},
+{t:"Japan",c:"AFC",g:"F",e:2005,e0:1983,h:0,pl:2,pts:4,gd:4,fm:"WWWDW",fp:13,fgd:7,mt:0.0191,wg:0.252,ko:1.000,qf:0.236,sf:0.094,fn:0.036,ti:0.0130},
+{t:"Switzerland",c:"UEFA",g:"B",e:1947,e0:1940,h:0,pl:2,pts:4,gd:3,fm:"DWDDW",fp:9,fgd:6,mt:0.0077,wg:0.376,ko:1.000,qf:0.258,sf:0.078,fn:0.026,ti:0.0075},
+{t:"Belgium",c:"UEFA",g:"G",e:1953,e0:1977,h:0,pl:2,pts:2,gd:0,fm:"DWWDD",fp:9,fgd:7,mt:0.0149,wg:0.159,ko:0.868,qf:0.155,sf:0.063,fn:0.022,ti:0.0069},
+{t:"Canada",c:"CONCACAF",g:"B",e:1885,e0:1877,h:1,pl:2,pts:4,gd:6,fm:"DWDDW",fp:9,fgd:8,mt:0.0037,wg:0.624,ko:1.000,qf:0.251,sf:0.071,fn:0.022,ti:0.0064},
+{t:"Croatia",c:"UEFA",g:"L",e:1913,e0:1936,h:0,pl:1,pts:0,gd:-2,fm:"WLLWL",fp:6,fgd:-4,mt:0.0048,wg:0.020,ko:0.768,qf:0.106,sf:0.038,fn:0.011,ti:0.0028},
+{t:"Egypt",c:"CAF",g:"G",e:1878,e0:1835,h:0,pl:2,pts:4,gd:2,fm:"DWLDW",fp:8,fgd:2,mt:0.0030,wg:0.634,ko:1.000,qf:0.159,sf:0.042,fn:0.011,ti:0.0023},
+{t:"Australia",c:"AFC",g:"D",e:1890,e0:1867,h:0,pl:2,pts:3,gd:0,fm:"WLDWL",fp:7,fgd:3,mt:0.0030,wg:0.003,ko:0.950,qf:0.084,sf:0.031,fn:0.008,ti:0.0020},
+{t:"Austria",c:"UEFA",g:"J",e:1880,e0:1861,h:0,pl:2,pts:3,gd:0,fm:"WWWWL",fp:12,fgd:6,mt:0.0024,wg:0.002,ko:0.970,qf:0.095,sf:0.032,fn:0.008,ti:0.0017},
+{t:"Ivory Coast",c:"CAF",g:"E",e:1885,e0:1868,h:0,pl:2,pts:3,gd:0,fm:"WWWWL",fp:12,fgd:6,mt:0.0043,wg:0.001,ko:0.958,qf:0.087,sf:0.022,fn:0.005,ti:0.0015},
+{t:"South Korea",c:"AFC",g:"A",e:1865,e0:1859,h:0,pl:2,pts:3,gd:0,fm:"LWWWL",fp:9,fgd:5,mt:0.0023,wg:0.039,ko:0.956,qf:0.107,sf:0.024,fn:0.006,ti:0.0011},
+{t:"Paraguay",c:"CONMEBOL",g:"D",e:1865,e0:1865,h:0,pl:2,pts:3,gd:-2,fm:"WLWLW",fp:9,fgd:2,mt:0.0016,wg:0.000,ko:0.826,qf:0.057,sf:0.019,fn:0.004,ti:0.0009},
+{t:"Uruguay",c:"CONMEBOL",g:"H",e:1873,e0:1899,h:0,pl:2,pts:2,gd:0,fm:"LDDDD",fp:4,fgd:-4,mt:0.0021,wg:0.095,ko:0.401,qf:0.051,sf:0.016,fn:0.004,ti:0.0009},
+{t:"Senegal",c:"CAF",g:"I",e:1870,e0:1909,h:0,pl:2,pts:0,gd:-3,fm:"WLDLL",fp:4,fgd:-2,mt:0.0039,wg:0.000,ko:0.530,qf:0.065,sf:0.016,fn:0.004,ti:0.0007},
+{t:"Ecuador",c:"CONMEBOL",g:"E",e:1874,e0:1927,h:0,pl:2,pts:1,gd:-1,fm:"DWWLD",fp:8,fgd:3,mt:0.0023,wg:0.000,ko:0.201,qf:0.022,sf:0.006,fn:0.002,ti:0.0004},
+{t:"Sweden",c:"UEFA",g:"F",e:1824,e0:1810,h:0,pl:2,pts:3,gd:0,fm:"WLDWL",fp:7,fgd:-1,mt:0.0029,wg:0.037,ko:0.958,qf:0.061,sf:0.012,fn:0.003,ti:0.0004},
+{t:"Iran",c:"AFC",g:"G",e:1830,e0:1826,h:0,pl:2,pts:2,gd:0,fm:"WWWDD",fp:11,fgd:9,mt:0.0010,wg:0.207,ko:0.653,qf:0.063,sf:0.014,fn:0.003,ti:0.0004},
+{t:"Scotland",c:"UEFA",g:"C",e:1819,e0:1816,h:0,pl:2,pts:3,gd:0,fm:"LWWWL",fp:9,fgd:6,mt:0.0016,wg:0.031,ko:0.879,qf:0.041,sf:0.009,fn:0.002,ti:0.0002},
+{t:"DR Congo",c:"CAF",g:"K",e:1795,e0:1773,h:0,pl:1,pts:1,gd:0,fm:"WWDLD",fp:8,fgd:2,mt:0.0010,wg:0.071,ko:0.595,qf:0.040,sf:0.008,fn:0.002,ti:0.0002},
+{t:"Bosnia & Herzegovina",c:"UEFA",g:"B",e:1719,e0:1732,h:0,pl:2,pts:1,gd:-3,fm:"DDDDL",fp:4,fgd:-3,mt:0.0012,wg:0.000,ko:0.457,qf:0.015,sf:0.002,fn:0.000,ti:0.0001},
+{t:"Algeria",c:"CAF",g:"J",e:1815,e0:1829,h:0,pl:1,pts:0,gd:-3,fm:"DWWLW",fp:10,fgd:3,mt:0.0012,wg:0.000,ko:0.501,qf:0.036,sf:0.007,fn:0.001,ti:0.0001},
+{t:"Ghana",c:"CAF",g:"L",e:1740,e0:1703,h:0,pl:1,pts:3,gd:1,fm:"LLLDW",fp:4,fgd:-6,mt:0.0014,wg:0.041,ko:0.811,qf:0.035,sf:0.005,fn:0.001,ti:0.0001},
+{t:"South Africa",c:"CAF",g:"A",e:1698,e0:1704,h:0,pl:2,pts:1,gd:-2,fm:"LDWLD",fp:5,fgd:-2,mt:0.0008,wg:0.000,ko:0.205,qf:0.006,sf:0.001,fn:0.000,ti:0.0000},
+{t:"Czech Republic",c:"UEFA",g:"A",e:1766,e0:1798,h:0,pl:2,pts:1,gd:-1,fm:"DWWLD",fp:8,fgd:4,mt:0.0012,wg:0.000,ko:0.157,qf:0.009,sf:0.002,fn:0.000,ti:0.0000},
+{t:"Qatar",c:"AFC",g:"B",e:1634,e0:1637,h:0,pl:2,pts:1,gd:-6,fm:"LLDDL",fp:2,fgd:-10,mt:0.0007,wg:0.000,ko:0.272,qf:0.004,sf:0.000,fn:0.000,ti:0.0000},
+{t:"Haiti",c:"CONCACAF",g:"C",e:1663,e0:1693,h:0,pl:2,pts:0,gd:-4,fm:"DWLLL",fp:4,fgd:-1,mt:0.0000,wg:0.000,ko:0.011,qf:0.000,sf:0.000,fn:0.000,ti:0.0000},
+{t:"Turkey",c:"UEFA",g:"D",e:1865,e0:1958,h:0,pl:2,pts:0,gd:-3,fm:"WWWLL",fp:9,fgd:3,mt:0.0000,wg:0.000,ko:0.083,qf:0.005,sf:0.001,fn:0.000,ti:0.0000},
+{t:"Curaçao",c:"CONCACAF",g:"E",e:1663,e0:1658,h:0,pl:2,pts:1,gd:-6,fm:"LLWLD",fp:4,fgd:-9,mt:0.0007,wg:0.000,ko:0.158,qf:0.002,sf:0.000,fn:0.000,ti:0.0000},
+{t:"Tunisia",c:"CAF",g:"F",e:1660,e0:1717,h:0,pl:2,pts:0,gd:-8,fm:"DLLLL",fp:1,fgd:-14,mt:0.0000,wg:0.000,ko:0.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000},
+{t:"New Zealand",c:"OFC",g:"G",e:1705,e0:1728,h:0,pl:2,pts:1,gd:-2,fm:"WLLDL",fp:4,fgd:-4,mt:0.0009,wg:0.000,ko:0.142,qf:0.004,sf:0.001,fn:0.000,ti:0.0000},
+{t:"Cape Verde",c:"CAF",g:"H",e:1750,e0:1712,h:0,pl:2,pts:2,gd:0,fm:"DWLDD",fp:6,fgd:0,mt:0.0009,wg:0.022,ko:0.689,qf:0.019,sf:0.004,fn:0.000,ti:0.0000},
+{t:"Saudi Arabia",c:"AFC",g:"H",e:1727,e0:1723,h:0,pl:2,pts:1,gd:-4,fm:"LWDDL",fp:5,fgd:-2,mt:0.0009,wg:0.000,ko:0.334,qf:0.007,sf:0.001,fn:0.000,ti:0.0000},
+{t:"Iraq",c:"AFC",g:"I",e:1696,e0:1722,h:0,pl:2,pts:0,gd:-6,fm:"WDLLL",fp:4,fgd:-7,mt:0.0007,wg:0.000,ko:0.100,qf:0.003,sf:0.000,fn:0.000,ti:0.0000},
+{t:"Jordan",c:"AFC",g:"J",e:1737,e0:1771,h:0,pl:1,pts:0,gd:-2,fm:"DLLLL",fp:1,fgd:-8,mt:0.0000,wg:0.001,ko:0.214,qf:0.010,sf:0.002,fn:0.000,ti:0.0000},
+{t:"Uzbekistan",c:"AFC",g:"K",e:1740,e0:1757,h:0,pl:1,pts:0,gd:-2,fm:"WDLLL",fp:4,fgd:-3,mt:0.0008,wg:0.009,ko:0.278,qf:0.009,sf:0.002,fn:0.000,ti:0.0000},
+{t:"Panama",c:"CONCACAF",g:"L",e:1747,e0:1783,h:0,pl:1,pts:0,gd:-1,fm:"WLWDL",fp:7,fgd:-2,mt:0.0008,wg:0.003,ko:0.185,qf:0.008,sf:0.001,fn:0.000,ti:0.0000}
 ]};
 
 const cache = {};
@@ -841,8 +843,11 @@ function forecastHTML(){
 
   /* Title odds */
   const top=byTitle.slice(0,18), maxT=top[0].ti;
-  html+=`<section class="panel col-7 reveal"><div class="phead"><h2>Title Odds</h2><span class="meta">P(win the World Cup)</span></div><div class="bars">`;
-  top.forEach(t=>{ const c=fcConf(t.ti,WC2026.sims); html+=`<div class="bar gold" title="${escapeHtml(t.t)} — ${fpct(t.ti)} ±${(ci95(t.ti,WC2026.sims)*100).toFixed(1)} pts (95% Monte-Carlo) · confidence ${c}/100 (${confBand(c)})"><div class="who">${flag(t.t,"flag sm")}<span class="nm">${escapeHtml(t.t)}</span></div><div class="track"><div class="fill" data-w="${(t.ti/maxT*100).toFixed(1)}"></div></div><div class="num" style="min-width:42px">${fpct(t.ti)}</div></div>`; });
+  const showMkt = !!WC2026.mb;
+  html+=`<section class="panel col-7 reveal"><div class="phead"><h2>Title Odds</h2><span class="meta">${showMkt?`our model · <span style="color:var(--blue)">▏</span> betting market`:`P(win the World Cup)`}</span></div><div class="bars">`;
+  top.forEach(t=>{ const c=fcConf(t.ti,WC2026.sims);
+    const tick = (showMkt && t.mt>0) ? `<div style="position:absolute;top:0;bottom:0;left:${Math.min(100,t.mt/maxT*100).toFixed(1)}%;width:2px;background:var(--blue);z-index:2" title="market ${fpct(t.mt)}"></div>` : ``;
+    html+=`<div class="bar gold" title="${escapeHtml(t.t)} — model ${fpct(t.ti)} ±${(ci95(t.ti,WC2026.sims)*100).toFixed(1)} pts (95% Monte-Carlo)${showMkt&&t.mt>0?` · market ${fpct(t.mt)}`:``} · confidence ${c}/100 (${confBand(c)})"><div class="who">${flag(t.t,"flag sm")}<span class="nm">${escapeHtml(t.t)}</span></div><div class="track" style="position:relative"><div class="fill" data-w="${(t.ti/maxT*100).toFixed(1)}"></div>${tick}</div><div class="num" style="min-width:42px">${fpct(t.ti)}${showMkt&&t.mt>0?`<span style="display:block;font-size:9px;color:var(--blue);font-family:'Archivo';font-weight:600">mkt ${fpct(t.mt)}</span>`:``}</div></div>`; });
   html+=`</div></section>`;
 
   /* Confederation share */
@@ -894,7 +899,7 @@ function forecastHTML(){
     html+=`<div class="gtable"><div class="gh">Group ${g}</div><table><tbody>`;
     teams.forEach(t=>{
       const adv=top2.has(t.t);
-      html+=`<tr class="${adv?'adv':''}"><td class="tn"><span class="team">${flag(t.t,"flag sm")}<span class="nm">${escapeHtml(t.t)}</span></span></td>
+      html+=`<tr class="${adv?'adv':''}" title="${escapeHtml(t.t)}: ${fpct(t.ko)} to reach the knockout · ${fpct(1-t.ko)} to be eliminated in the group stage"><td class="tn"><span class="team">${flag(t.t,"flag sm")}<span class="nm">${escapeHtml(t.t)}</span></span></td>
         <td style="width:62px;font-size:10px;color:var(--muted);text-align:center" title="played ${t.pl}, goal diff ${t.gd>0?'+':''}${t.gd}">${t.pl?`${t.pts} pt · ${t.pl} gp`:'—'}</td>
         <td style="width:26%"><div class="track" style="height:9px"><div class="fill" data-w="${(t.ko*100).toFixed(0)}" style="background:${adv?'linear-gradient(90deg,var(--grass-deep),var(--grass))':'rgba(255,255,255,.22)'}"></div></div></td>
         <td class="pts" style="width:44px;font-size:15px">${fpct(t.ko)}</td></tr>`;
@@ -928,7 +933,7 @@ function assignThirds(qg){
   if(bt(0))return res; slots.forEach((m,i)=>res[m]=qg[i]); return res;
 }
 async function recomputeForecast(N, onProgress){
-  const TEAMS=WC2026.teams.map(t=>({name:t.t,confed:t.c,group:t.g,host:!!t.h,e0:t.e0,fm:t.fm,fp:t.fp,fgd:t.fgd}));
+  const TEAMS=WC2026.teams.map(t=>({name:t.t,confed:t.c,group:t.g,host:!!t.h,e0:t.e0,fm:t.fm,fp:t.fp,fgd:t.fgd,mt:t.mt}));
   const HOSTS=new Set(TEAMS.filter(t=>t.host).map(t=>t.name));
   const GROUPS={}; TEAMS.forEach(t=>{(GROUPS[t.group]=GROUPS[t.group]||[]).push(t.name);});
   const liveElo={}; TEAMS.forEach(t=>liveElo[t.name]=t.e0);
@@ -994,7 +999,7 @@ async function recomputeForecast(N, onProgress){
     await new Promise(r=>setTimeout(r)); }
   const teams=TEAMS.map(t=>({t:t.name,c:t.confed,g:t.group,e:Math.round(liveElo[t.name]),e0:Math.round(t.e0),h:t.host?1:0,
     pl:cur[t.name][0],pts:cur[t.name][1],gd:cur[t.name][2]-cur[t.name][3],
-    fm:t.fm,fp:t.fp,fgd:t.fgd,
+    fm:t.fm,fp:t.fp,fgd:t.fgd,mt:t.mt,
     wg:winGroup[t.name]/N,ko:reach[t.name].knockout/N,qf:reach[t.name].quarter/N,sf:reach[t.name].semi/N,fn:reach[t.name].final/N,ti:reach[t.name].title/N
   })).sort((a,b)=>b.ti-a.ti);
   const avgQ=TEAMS.reduce((s,t)=>s+reach[t.name].knockout,0)/N;
@@ -1007,7 +1012,7 @@ function wireForecastRefresh(){
   btn.addEventListener("click",async()=>{
     btn.disabled=true; btn.style.opacity=".6"; btn.textContent="↻ Simulating…";
     try{
-      const res=await recomputeForecast(20000, p=>{ status.textContent="Running 20,000 simulations… "+Math.round(p*100)+"%"; });
+      const res=await recomputeForecast(30000, p=>{ status.textContent="Running 30,000 simulations… "+Math.round(p*100)+"%"; });
       WC2026.sims=res.sims; WC2026.asOf=res.asOf; WC2026.played=res.played; WC2026.total=res.total;
       WC2026.playedAll=res.playedAll; WC2026.totalAll=res.totalAll; WC2026.teams=res.teams;
       document.getElementById("liveTag").textContent="Live · "+WC2026.asOf;
@@ -1119,7 +1124,8 @@ function wireMatchExplorer(){
   const sources=[
     ["openfootball/worldcup.json","https://github.com/openfootball/worldcup.json","CC0 · public domain","Every men's World Cup 1930–2026: matches, scores (incl. extra time &amp; penalties), every goal (scorer, minute, penalty / own-goal), groups, stadiums and 2026 squads. Powers the Tournament &amp; All-Time pages and the live 2026 results that condition the forecast."],
     ["martj42/international_results","https://github.com/martj42/international_results","CC0 · public domain","~49,000 international results since 1872. We use it to compute World-Football Elo and recent form for all 48 nations."],
-    ["World-Football Elo (computed)","https://eloratings.net/","derived here","Not downloaded — recomputed from scratch by tools/build_wc2026_dataset.py over the full results history. This is the engine behind the 2026 forecast."]];
+    ["World-Football Elo (computed)","https://eloratings.net/","derived here","Not downloaded — recomputed from scratch by tools/build_wc2026_dataset.py over the full results history. This is the engine behind the 2026 forecast."],
+    ["the-odds-api.com (betting market)","https://the-odds-api.com/","optional","When an API key is supplied, we pull the de-vigged WC2026 <b>outright-winner</b> and <b>match</b> markets and use them in the forecast (see the maths below). The market prices in injuries, form and squad changes that Elo can't. The raw odds are downloadable via Export → Market odds. <b>Odds via the-odds-api.com.</b>"]];
   document.getElementById("dataSources").innerHTML=sources.map(([n,u,tag,d])=>`<div style="margin-bottom:9px"><b><a href="${u}" target="_blank" rel="noopener">${n}</a></b> <span class="tag">${tag}</span><br><span style="color:var(--muted)">${d}</span></div>`).join("");
 
   /* ---------- CSV export ---------- */
@@ -1173,7 +1179,13 @@ function wireMatchExplorer(){
   document.addEventListener("click",e=>{ if(!e.target.closest("#xmenu") && e.target!==xbtn) xmenu.classList.remove("open"); });
   xmenu.addEventListener("click",async e=>{
     const b=e.target.closest("button[data-x]"); if(!b) return;
-    const fns={matches:exportMatches, goals:exportGoals, standings:exportStandings, forecast:exportForecast};
+    async function exportOdds(){
+      const r=await fetch("data/wc2026_odds.csv",{cache:"no-store"});
+      if(!r.ok) throw new Error("no odds file yet — rebuild the data with ODDS_API_KEY set");
+      const text=await r.text(); download("wc2026_market_odds.csv", text);
+      return Math.max(0, text.trim().split("\n").length-2);
+    }
+    const fns={matches:exportMatches, goals:exportGoals, standings:exportStandings, forecast:exportForecast, odds:exportOdds};
     try{ xstatus.textContent="Preparing… (loading all editions)"; const n=await fns[b.dataset.x]();
       xstatus.textContent=`Downloaded ${n.toLocaleString()} rows ✓`; }
     catch(err){ xstatus.textContent="Export failed: "+err.message; }

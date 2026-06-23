@@ -88,18 +88,23 @@ Two independent ways to refresh after matches are played:
   Overrides are applied at freeze time, so they flow through the simulation, the embedded numbers
   **and** the in-browser refresh. No file → no change.
 - **Bookmaker-odds blend** (wired in — the single biggest lever) — set a free
-  [the-odds-api](https://the-odds-api.com/) key in your environment and the pipeline pulls the
-  de-vigged WC2026 outright (title) market and pulls each team's frozen Elo **halfway toward** what
-  the market implies (it prices in injuries, form and squad changes that pure Elo can't):
+  [the-odds-api](https://the-odds-api.com/) key in your environment and the pipeline pulls **two**
+  de-vigged WC2026 markets and feeds both into the ratings (they price in injuries, form and squad
+  changes that pure Elo can't):
+  - **Outright winner** — regressed into Elo units; each team's frozen Elo is pulled halfway toward it.
+  - **Match (h2h)** odds for upcoming games — an extra pairwise nudge.
 
   ```bash
   ODDS_API_KEY=your_key_here python3 tools/build_wc2026_dataset.py
   ```
 
-  The key is read only from the environment — **never committed and never sent to the browser**; only
-  our Elo-derived forecast is published (not the raw odds), respecting the-odds-api's terms. When a
-  build is market-informed, the forecast page says so and its confidence discount shrinks. Without the
-  key, the blend is simply skipped.
+  The key is read **only** from the `ODDS_API_KEY` environment variable — it is never committed and
+  never sent to the browser. The market signal flows through every forecast number (title odds,
+  group-stage exit = 1 − reach-knockout, road to the final…); the Title Odds panel marks the market's
+  number next to ours, and the collected odds are saved to `data/wc2026_odds.csv` (Export → Market
+  odds). the-odds-api only sells the winner + match markets — there's no discrete "group exit" market,
+  so those stage probabilities are our model's, now market-informed. Without the key the blend is
+  simply skipped. Simulations: **50,000** in the pipeline, 30,000 for the in-browser refresh.
 
 ## Data sources & credits
 
