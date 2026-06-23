@@ -33,7 +33,9 @@ Two pieces, one repo, no build step:
   shown alongside ours), confederation share, each team's **road to the final**, **current form**,
   the **official FIFA World Ranking** (frozen for the tournament, blended into the model — see below),
   **who escapes each group** (and group-stage-exit on hover), plus **data & forecast confidence
-  scores** and a "↻ Refresh with live results" button that re-runs the whole simulation in your browser.
+  scores**, a **History-window slider** (recompute each team's Elo from only the internationals since a
+  year you pick — the full results history is replayed live in your browser), and a "↻ Refresh with live
+  results" button that re-runs the whole simulation.
 - **Export CSV** — all matches (1930–2026), all goals, all group standings, the 2026 forecast, and the
   collected market odds. Matches/goals/standings and the forecast carry the **live** ESPN-overlaid state
   (the forecast CSV is tagged `data_state=live` once you've refreshed, `snapshot` otherwise, with an
@@ -92,7 +94,11 @@ Standard library only — no `pip install`. (If your Python lacks root CA certif
 ### Keeping it live
 
 1. **In the browser** — the Forecast tab's **"↻ Refresh with live results"** button re-runs the full
-   simulation client-side (~30k runs, a couple of seconds) from current match data. No rebuild.
+   simulation client-side (~30k runs, a couple of seconds) from current match data. No rebuild. The
+   **History-window slider** does the same but first recomputes each team's Elo from only the
+   internationals since a chosen year (it fetches the martj42 results history via the CDN and replays the
+   Elo in-browser) — a shorter window is more reactive to recent form, a longer one steadier. The default
+   (full history, 1872) keeps the market blend; custom windows are pure Elo + the FIFA blend.
 2. **Rebuild the snapshot** — `python3 tools/build_wc2026_dataset.py` then commit; this refreshes
    `data/` and the numbers baked into `index.html`. Wire it to a daily CI job to stay fresh.
 
@@ -172,7 +178,8 @@ environment variable / secret.
 - **[openfootball/worldcup.json](https://github.com/openfootball/worldcup.json)** — historical match
   data and the 2026 schedule/bracket (CC0 / public domain).
 - **[martj42/international_results](https://github.com/martj42/international_results)** — international
-  results history used for Elo and form (CC0).
+  results history (~49,000 matches since 1872) used for Elo and form (CC0). Read by the Python pipeline,
+  and fetched via the CDN in the browser for the History-window slider's live Elo replay.
 - **[the-odds-api.com](https://the-odds-api.com/)** — optional betting-market odds.
 - **ESPN public scoreboard** — live in-play scores (free, no key).
 - **[FIFA / Coca-Cola World Ranking](https://inside.fifa.com/fifa-world-ranking/men)** — official points,

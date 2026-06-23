@@ -903,6 +903,7 @@ function forecastHTML(){
   const confTitle={}; T.forEach(t=>confTitle[t.c]=(confTitle[t.c]||0)+t.ti);
   const confEnt=Object.entries(confTitle).sort((a,b)=>b[1]-a[1]);
   const shades=["rgba(244,200,74,.16)","rgba(244,200,74,.34)","rgba(244,200,74,.56)","rgba(244,200,74,.8)","#f4c84a"];
+  const eOver=!!ELO_OVERRIDE, mktOn=WC2026.mb && !eOver, fromTxt=eOver?`since ${ELO_YEAR}`:`over every men's international since 1872`;
 
   let html=`<div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:20px" class="reveal">
     <button class="xbtn" id="fcRefresh" style="color:var(--grass)">↻ Refresh with live results</button>
@@ -917,9 +918,22 @@ function forecastHTML(){
   </div><div class="grid">`;
 
   html+=`<section class="panel col-12 reveal" style="padding:15px 20px"><p class="note" style="margin:0">
-    <b style="color:var(--gold)">How this is built:</b> a <b style="color:var(--ink)">live</b> model — World-Football Elo computed from scratch over every men's international since 1872, then <b style="color:var(--ink)">conditioned on the actual group results through ${WC2026.asOf}</b> (${WC2026.played}/${WC2026.total} group games are locked in; the rest are simulated). ${WC2026.sims.toLocaleString()} Monte-Carlo runs of the real format — 12 groups where <b style="color:var(--ink)">32 of 48 advance (top 2 of each group + the 8 best third-placed)</b>, then the official Round-of-32 → Final bracket. Hosts get a +${WC2026.he} Elo home bump.&nbsp;
-    ${WC2026.mb?`<b style="color:var(--grass)">Market-informed:</b> each team's strength is then pulled halfway toward the de-vigged betting market, which already prices in injuries, form and squad changes — so the usual blind spot is partly covered.&nbsp;`:``}
-    <b style="color:var(--red)">Read with care:</b> ${WC2026.mb?`even with the market blend, it can't fully see who's injured or in form, and`:`still a pure <i>team-strength</i> model — it doesn't know about squad turnover, ageing stars or injuries (Germany 2026 ≠ Germany 2022), and`} knockout football is high-variance. These are <b style="color:var(--ink)">probabilities, not predictions</b>.</p></section>`;
+    <b style="color:var(--gold)">How this is built:</b> a <b style="color:var(--ink)">live</b> model — World-Football Elo computed from scratch ${fromTxt}, then <b style="color:var(--ink)">conditioned on the actual group results through ${WC2026.asOf}</b> (${WC2026.played}/${WC2026.total} group games are locked in; the rest are simulated). ${WC2026.sims.toLocaleString()} Monte-Carlo runs of the real format — 12 groups where <b style="color:var(--ink)">32 of 48 advance (top 2 of each group + the 8 best third-placed)</b>, then the official Round-of-32 → Final bracket. Hosts get a +${WC2026.he} Elo home bump.&nbsp;
+    ${mktOn?`<b style="color:var(--grass)">Market-informed:</b> each team's strength is then pulled halfway toward the de-vigged betting market, which already prices in injuries, form and squad changes — so the usual blind spot is partly covered.&nbsp;`:``}${eOver?`<b style="color:var(--gold)">Custom history window:</b> strength is recomputed from internationals since <b style="color:var(--ink)">${ELO_YEAR}</b> only (market blend off; FIFA blend still on).&nbsp;`:``}
+    <b style="color:var(--red)">Read with care:</b> ${mktOn?`even with the market blend, it can't fully see who's injured or in form, and`:`still a pure <i>team-strength</i> model — it doesn't know about squad turnover, ageing stars or injuries (Germany 2026 ≠ Germany 2022), and`} knockout football is high-variance. These are <b style="color:var(--ink)">probabilities, not predictions</b>.</p></section>`;
+
+  /* History window — recompute strength from a chosen start year */
+  const elabY = ELO_YEAR>ELO_MIN_YEAR?ELO_YEAR:null;
+  const elab = elabY ? `since <b style="color:var(--ink)">${elabY}</b> <span style="color:var(--muted2)">→ 2026 · pure Elo + FIFA</span>` : `<b style="color:var(--ink)">full history</b> <span style="color:var(--muted2)">(1872 → 2026 · model default)</span>`;
+  html+=`<section class="panel col-12 reveal"><div class="phead"><h2>History window</h2><span class="meta">how far back the strength model looks</span></div>
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <input type="range" id="eloRange" min="${ELO_MIN_YEAR}" max="2024" step="1" value="${ELO_YEAR}" aria-label="Elo history start year" style="flex:1;min-width:240px;accent-color:var(--gold)">
+      <span id="eloRangeLab" style="font-size:12.5px;min-width:250px">${elab}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:9px;letter-spacing:.1em;color:var(--muted2);margin-top:2px"><span>ALL · 1872</span><span>1950</span><span>1990</span><span>2024</span></div>
+    <div id="eloRangeStatus" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+    <p class="note" style="margin-top:10px">By default the forecast rates every team on <b style="color:var(--ink)">all internationals since 1872</b>. Drag to a later year to recompute each team's Elo from <b>only</b> the matches since then — a shorter window leans harder on recent results (more reactive, more volatile); a longer one is steadier. It fetches the full results history once and replays the Elo right in your browser, then re-runs ${(20000).toLocaleString()} simulations. <span style="color:var(--muted2)">The betting-market blend only applies at the full-history default; custom windows use pure Elo plus the FIFA blend.</span></p>
+  </section>`;
 
   /* Confidence */
   const dconf=WC2026.conf||{data:90,C:100,R:100,S:80,fs:30};
@@ -1045,6 +1059,61 @@ const FIFA_W=0.35;   // how far the forecast anchor is pulled toward the officia
 let FORECAST_LIVE=false;   // flips true once the in-browser sim has re-run from live results, so the CSV export can label itself "live" vs "snapshot".
 const eExp=dr=>1/(Math.pow(10,-dr/400)+1);
 const gMult=gd=>{gd=Math.abs(gd);return gd<=1?1:gd===2?1.5:(11+gd)/8;};
+
+/* ---- History-window Elo: recompute team strength from a user-chosen start year (powers the forecast slider) ---- */
+const ELO_MIN_YEAR=1872, ELO_WINDOW_END="2026-06-10";   // cut at the pre-tournament date so it lines up with e0; the sim then adds live results
+const RESULTS_CDN="https://cdn.jsdelivr.net/gh/martj42/international_results@master/results.csv";  // CORS-enabled mirror of martj42/international_results
+const MART_ALIAS={"Bosnia & Herzegovina":"Bosnia and Herzegovina","USA":"United States"};  // app name -> martj42 spelling
+const BASE_E0={}, BASE_FE={};   // pristine baked (market+FIFA-blended) pre-tournament strength, captured once so windowed recomputes never corrupt the default
+WC2026.teams.forEach(t=>{ BASE_E0[t.t]=t.e0; BASE_FE[t.t]=(t.fe!=null?t.fe:t.e0); });
+let ELO_YEAR=ELO_MIN_YEAR, ELO_OVERRIDE=null, ELO_MATCHES=0;   // current window state (override=null => default blended model)
+const kWeight=t=>{ t=(t||"").toLowerCase();
+  if(t==="fifa world cup")return 60;
+  if(t.includes("qualification")||t.includes("qualifier"))return 40;
+  if(t.includes("nations league"))return 40;
+  if(["uefa euro","copa américa","copa america","african cup of nations","afc asian cup","gold cup","concacaf gold cup","ofc nations cup"].includes(t))return 50;
+  if(["friendly","fifa series","concacaf series","kirin cup","king's cup"].includes(t))return 20;
+  return 30; };
+function splitCsvLine(line){ const f=[]; let cur="",q=false;
+  for(let i=0;i<line.length;i++){ const ch=line[i];
+    if(q){ if(ch==='"'){ if(line[i+1]==='"'){cur+='"';i++;} else q=false; } else cur+=ch; }
+    else if(ch===','){f.push(cur);cur="";} else if(ch==='"'){q=true;} else cur+=ch; }
+  f.push(cur); return f; }
+let _resultsCache=null;
+async function getResults(){
+  if(_resultsCache) return _resultsCache;
+  const txt=await fetch(RESULTS_CDN,{cache:"force-cache"}).then(r=>{if(!r.ok)throw new Error("results.csv "+r.status);return r.text();});
+  const lines=txt.split(/\r?\n/), head=splitCsvLine(lines[0]), ix={}; head.forEach((h,i)=>ix[h.trim()]=i);
+  const rows=[];
+  for(let i=1;i<lines.length;i++){ if(!lines[i])continue; const c=splitCsvLine(lines[i]);
+    rows.push({date:c[ix.date],h:c[ix.home_team],a:c[ix.away_team],hs:+c[ix.home_score],as:+c[ix.away_score],t:c[ix.tournament],n:c[ix.neutral]}); }
+  rows.sort((x,y)=> x.date<y.date?-1:x.date>y.date?1:0);
+  return (_resultsCache=rows);
+}
+// World-Football Elo over [startYear-01-01 .. ELO_WINDOW_END]; returns {appTeam -> pre-tournament rating} for the 48
+async function eloFromYear(startYear){
+  const rows=await getResults(), elo={}, startStr=startYear+"-01-01"; let used=0;
+  const get=n=>elo[n]??1500;
+  for(const r of rows){
+    if(!r.date||r.date<startStr||r.date>ELO_WINDOW_END) continue;
+    if(!r.h||!r.a||!Number.isFinite(r.hs)||!Number.isFinite(r.as)) continue;
+    const neutral=["true","1","yes"].includes(String(r.n).toLowerCase());
+    const rh=get(r.h),ra=get(r.a),ha=neutral?0:100;
+    const weH=eExp((rh+ha)-ra), wH=r.hs>r.as?1:r.hs===r.as?0.5:0, d=kWeight(r.t)*gMult(r.hs-r.as)*(wH-weH);
+    elo[r.h]=rh+d; elo[r.a]=ra-d; used++;
+  }
+  const out={_n:used}; for(const t of WC2026.teams){ const mn=MART_ALIAS[t.t]||t.t; out[t.t]=Math.round(elo[mn]??1500); }
+  return out;
+}
+// rescale official FIFA points onto a given Elo distribution (z-score match) -> FIFA-equivalent Elo
+function rescaleFifa(baseByName){
+  const ts=WC2026.teams.filter(t=>t.fpt!=null); if(ts.length<8) return {...BASE_FE};
+  const e0=ts.map(t=>baseByName[t.t]), fp=ts.map(t=>t.fpt);
+  const mean=z=>z.reduce((s,x)=>s+x,0)/z.length, std=(z,m)=>Math.sqrt(z.reduce((s,x)=>s+(x-m)*(x-m),0)/z.length)||1;
+  const me=mean(e0),se=std(e0,me),mf=mean(fp),sf=std(fp,mf), fe={};
+  for(const t of ts) fe[t.t]=Math.round(me+(t.fpt-mf)*(se/sf));
+  return fe;
+}
 function assignThirds(qg){
   const slots=THIRD_SLOTS.slice().sort((a,b)=>R32T[a][1][1].length-R32T[b][1][1].length);
   const res={}, rem=new Set(qg);
@@ -1053,8 +1122,10 @@ function assignThirds(qg){
     for(const g of cands){ if(allowed.includes(g)){ res[slots[i]]=g; rem.delete(g); if(bt(i+1))return true; rem.add(g); delete res[slots[i]]; } } return false; };
   if(bt(0))return res; slots.forEach((m,i)=>res[m]=qg[i]); return res;
 }
-async function recomputeForecast(N, onProgress){
-  const TEAMS=WC2026.teams.map(t=>({name:t.t,confed:t.c,group:t.g,host:!!t.h,e0:t.e0,fm:t.fm,fp:t.fp,fgd:t.fgd,mt:t.mt,fr:t.fr,fpt:t.fpt,fe:t.fe}));
+async function recomputeForecast(N, onProgress, override){
+  const base = override || BASE_E0;                       // pre-tournament strength: a user-chosen Elo window, or the baked (market+FIFA) default
+  const feMap = override ? rescaleFifa(base) : BASE_FE;   // FIFA-equivalent Elo rescaled to whichever base is in use
+  const TEAMS=WC2026.teams.map(t=>({name:t.t,confed:t.c,group:t.g,host:!!t.h,e0:(base[t.t]!=null?base[t.t]:t.e0),fm:t.fm,fp:t.fp,fgd:t.fgd,mt:t.mt,fr:t.fr,fpt:t.fpt,fe:(feMap[t.t]!=null?feMap[t.t]:(t.fe!=null?t.fe:t.e0))}));
   const HOSTS=new Set(TEAMS.filter(t=>t.host).map(t=>t.name));
   const GROUPS={}; TEAMS.forEach(t=>{(GROUPS[t.group]=GROUPS[t.group]||[]).push(t.name);});
   const liveElo={}; TEAMS.forEach(t=>liveElo[t.name]=t.e0);          // pure World-Football Elo, evolves from results (shown as "live Elo")
@@ -1147,17 +1218,46 @@ function wireForecastRefresh(){
   btn.addEventListener("click",async()=>{
     btn.disabled=true; btn.style.opacity=".6"; btn.textContent="↻ Simulating…";
     try{
-      const res=await recomputeForecast(30000, p=>{ status.textContent="Running 30,000 simulations… "+Math.round(p*100)+"%"; });
+      const res=await recomputeForecast(30000, p=>{ status.textContent="Running 30,000 simulations… "+Math.round(p*100)+"%"; }, ELO_OVERRIDE);
       WC2026.sims=res.sims; WC2026.asOf=res.asOf; WC2026.played=res.played; WC2026.total=res.total;
       WC2026.playedAll=res.playedAll; WC2026.totalAll=res.totalAll; WC2026.teams=res.teams;
       FORECAST_LIVE=true;   // the on-screen + exported forecast now reflect live results, not the build snapshot
       document.getElementById("liveTag").textContent="Live · "+WC2026.asOf;
-      app.innerHTML=forecastHTML(); animateIn(); wireForecastRefresh();
+      app.innerHTML=forecastHTML(); animateIn(); wireForecastRefresh(); wireEloRange();
       const s2=document.getElementById("fcRefreshStatus");
       if(s2) s2.innerHTML=`<span style="color:var(--grass)">✓ Updated from live results</span> — ${res.played}/${res.total} group games played, as of ${res.asOf}.`;
     }catch(e){
       btn.disabled=false; btn.style.opacity="1"; btn.textContent="↻ Refresh with live results";
       status.innerHTML=`<span style="color:var(--red)">Couldn't refresh: ${escapeHtml(e.message)}</span>`;
+    }
+  });
+}
+function wireEloRange(){
+  const sl=document.getElementById("eloRange"); if(!sl) return;
+  const lab=document.getElementById("eloRangeLab"), status=document.getElementById("eloRangeStatus");
+  const yearOf=v=> +v<=ELO_MIN_YEAR ? null : +v;        // min position = default blended model (no override)
+  const show=v=>{ const y=yearOf(v); lab.innerHTML = y? `since <b style="color:var(--ink)">${y}</b> <span style="color:var(--muted2)">→ 2026 · pure Elo + FIFA</span>` : `<b style="color:var(--ink)">full history</b> <span style="color:var(--muted2)">(1872 → 2026 · model default: market + FIFA blends)</span>`; };
+  sl.addEventListener("input",()=>show(sl.value));
+  sl.addEventListener("change",async()=>{
+    const y=yearOf(sl.value); sl.disabled=true;
+    try{
+      let override=null;
+      if(y){ status.textContent="Loading match history…";
+        override=await eloFromYear(y); ELO_MATCHES=override._n||0; delete override._n; }
+      ELO_YEAR=y||ELO_MIN_YEAR; ELO_OVERRIDE=override;
+      const res=await recomputeForecast(20000, p=>{ status.textContent=(y?`Recomputing Elo since ${y} & simulating… `:"Re-simulating… ")+Math.round(p*100)+"%"; }, override);
+      WC2026.sims=res.sims; WC2026.asOf=res.asOf; WC2026.played=res.played; WC2026.total=res.total;
+      WC2026.playedAll=res.playedAll; WC2026.totalAll=res.totalAll; WC2026.teams=res.teams;
+      FORECAST_LIVE=true;
+      document.getElementById("liveTag").textContent="Live · "+WC2026.asOf;
+      app.innerHTML=forecastHTML(); animateIn(); wireForecastRefresh(); wireEloRange();
+      const s2=document.getElementById("eloRangeStatus");
+      if(s2) s2.innerHTML = y
+        ? `<span style="color:var(--grass)">✓ Strength recomputed from ${ELO_MATCHES.toLocaleString()} internationals since ${y}.</span> Market blend off for custom windows; FIFA blend still on.`
+        : `<span style="color:var(--grass)">✓ Back to the full-history model</span> (market + FIFA blends).`;
+    }catch(e){
+      sl.disabled=false;
+      status.innerHTML=`<span style="color:var(--red)">Couldn't recompute: ${escapeHtml(e.message)}</span>`;
     }
   });
 }
@@ -1203,7 +1303,7 @@ async function render(){
       document.getElementById("liveTag").textContent="Live · "+WC2026.asOf;
       document.getElementById("hSub").innerHTML=`A <b>live</b> model for <b>USA · Canada · Mexico 2026</b>, updated through <b>${WC2026.asOf}</b> (${WC2026.played}/${WC2026.total} group games in) — it locks in the results so far and simulates the rest ${WC2026.sims.toLocaleString()} times to give title odds, each team's road to the final and who escapes every group.`;
       app.innerHTML=forecastHTML();
-      wireForecastRefresh();
+      wireForecastRefresh(); wireEloRange();
     }
     animateIn();
   }catch(e){ showError(e); }
@@ -1354,13 +1454,14 @@ async function loadLiveScores(){
   }
   function exportForecast(){
     const state=FORECAST_LIVE?"live":"snapshot";
+    const eloFrom=ELO_OVERRIDE?ELO_YEAR:"1872 (all · market+FIFA blend)";
     const rows=WC2026.teams.slice().sort((a,b)=>b.ti-a.ti).map((t,i)=>({rank:i+1, team:t.t, confederation:t.c, group:t.g,
-      data_state:state, as_of:WC2026.asOf,
+      data_state:state, as_of:WC2026.asOf, elo_from_year:eloFrom,
       fifa_rank:t.fr??"", fifa_points:t.fpt??"", fifa_elo_equiv:t.fe??"", elo_live:t.e, elo_pre:t.e0, host:!!t.h,
       played:t.pl, points:t.pts, goal_diff:t.gd, p_win_group:t.wg, p_reach_knockout:t.ko,
       p_quarterfinal:t.qf, p_semifinal:t.sf, p_final:t.fn, p_title:t.ti}));
     download(`wc2026_${state}_forecast_${WC2026.asOf}.csv`,
-      toCSV(["rank","team","confederation","group","data_state","as_of","fifa_rank","fifa_points","fifa_elo_equiv","elo_live","elo_pre","host","played","points","goal_diff","p_win_group","p_reach_knockout","p_quarterfinal","p_semifinal","p_final","p_title"],rows));
+      toCSV(["rank","team","confederation","group","data_state","as_of","elo_from_year","fifa_rank","fifa_points","fifa_elo_equiv","elo_live","elo_pre","host","played","points","goal_diff","p_win_group","p_reach_knockout","p_quarterfinal","p_semifinal","p_final","p_title"],rows));
     return rows.length;
   }
   const xbtn=document.getElementById("exportBtn"), xmenu=document.getElementById("xmenu"), xstatus=document.getElementById("xstatus");

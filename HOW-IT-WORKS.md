@@ -123,6 +123,25 @@ A pre-tournament prediction gets stale the moment games are played. So:
 
 ---
 
+## 5b. Choosing how much history to use
+
+By default we rate every team on **all internationals since 1872** — maximum stability. But "since 1872"
+also means a great team's bad recent run barely moves its number. So the forecast page has a **History-window
+slider**: drag it to, say, 2018 and we *recompute* every team's Elo from **only** the matches since then
+(the full results history is fetched and replayed right in your browser), then re-run the whole simulation.
+
+- **Short window** (e.g. since 2022) → reacts fast to current form, but is noisier.
+- **Long window** (since 1872) → steadier, but slower to notice a team rising or falling.
+
+It's a great way to *see* how much "recent form vs. long history" changes who the model favours. (The
+betting-market blend only applies at the full-history default; custom windows use pure Elo + the FIFA blend.)
+
+> **One honest detail about "Current Form":** the little W-D-L form strings are computed when the data is
+> **rebuilt** (daily), not on every live in-browser refresh — they don't feed the prediction maths, they're
+> there to *show* recent results, and during the tournament the daily rebuild picks up each team's World
+> Cup games within a day. Everything that *does* drive the forecast (Elo, the locked results, the odds) is
+> what updates live.
+
 ## 6. Cards and suspensions
 
 Referees' cards matter for more than discipline tables. Under FIFA's rules, **two yellow cards** (or one
