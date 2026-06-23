@@ -1,140 +1,164 @@
 # World Cup Almanac
 
-An interactive FIFA World Cup data almanac (every men's tournament, 1930 → 2026) **and** a
-zero-cost data pipeline that computes World-Football Elo from scratch and runs a **live**
-Monte-Carlo forecast of World Cup 2026.
+An interactive FIFA World Cup data almanac (every men's tournament, **1930 → 2026**) **and** a
+near-zero-cost pipeline that computes World-Football Elo from scratch, optionally blends in the
+betting market, and runs a **live** Monte-Carlo forecast of World Cup 2026 with confidence scores.
 
-Two pieces, one repo:
+Two pieces, one repo, no build step:
 
 | Part | File | What it does |
 |---|---|---|
-| **Almanac** (web) | [`index.html`](index.html) | Self-contained dashboard — group standings, golden boot, goal-timing charts, the full knockout bracket, a searchable match explorer, an all-time view, a live 2026 forecast, and CSV export. No build step, no dependencies. |
-| **Data pipeline** (Python) | [`tools/build_wc2026_dataset.py`](tools/build_wc2026_dataset.py) | Pulls the complete international results history, computes Elo, emits a per-team-per-match CSV + coverage report, runs the live forecast, and refreshes the dashboard's embedded numbers. |
+| **Almanac** (web) | [`index.html`](index.html) | Self-contained dashboard — three views (Tournament / All-Time / 2026 Forecast), CSV export, and built-in "how it works" docs. Vanilla JS, no dependencies. |
+| **Data pipeline** (Python) | [`tools/build_wc2026_dataset.py`](tools/build_wc2026_dataset.py) | Computes Elo over every international since 1872, MLE-fits the goal model, optionally blends the market, runs the live forecast, writes `data/`, and re-embeds the numbers into `index.html`. Standard library only. |
+
+## What the almanac shows
+
+- **Tournament** (pick any edition 1930–2026) — group standings, the Golden Boot, when-goals-are-scored
+  and goals-by-stage charts, confederation breakdown, the full **knockout bracket** (extra time &
+  penalties resolved), a searchable **match explorer** with goal-by-goal detail, and penalties / own goals.
+- **All-Time** — roll of honour, goals-per-match trend across every edition, top-scoring nations,
+  most appearances, all-time leading scorers, and all-time penalties / own goals.
+- **2026 Forecast** — a live, **market-informed** Monte-Carlo: title odds (with the market's number
+  shown alongside ours), confederation share, each team's **road to the final**, **current form**,
+  **who escapes each group** (and group-stage-exit on hover), plus **data & forecast confidence
+  scores** and a "↻ Refresh with live results" button that re-runs the whole simulation in your browser.
+- **Export CSV** — all matches (1930–2026), all goals, all group standings, the 2026 forecast, and the
+  collected market odds.
 
 ## Quick start
 
-**View the almanac** — open `index.html` in any modern browser (it fetches historical match
-data from the openfootball dataset via the jsDelivr CDN, so an internet connection is needed),
-or serve the folder and visit it:
+**View it** — open `index.html` in any modern browser (it fetches historical match data from the
+openfootball dataset via the jsDelivr CDN, so it needs an internet connection), or serve the folder:
 
 ```bash
 python3 -m http.server 8000   # then open http://localhost:8000
 ```
 
-**Regenerate the data + forecast** (free, no API keys):
+**Regenerate the data + forecast** (free, no key needed):
 
 ```bash
 python3 tools/build_wc2026_dataset.py
 ```
 
-This rewrites everything in [`data/`](data/) and re-embeds the latest forecast into
-`index.html`. Standard library only — no `pip install` required. (If your Python lacks
-root CA certificates, `pip install certifi` and it will be picked up automatically.)
-
-## What's in `data/`
-
-| File | Contents |
-|---|---|
-| `wc2026_team_match_log.csv` | One row per team per match for the WC2026 nations, Jan 2022 → Jun 10 2026. Real columns: date, competition, season, stage, team, confederation, opponent, home/away, goals, result, venue + pre-match **Elo** (`elo_pre`, `opp_elo_pre`, `elo_win_prob`, `elo_post`, `elo_change`). Extended stats (shots, possession, xG, cards, …) are intentionally blank — see below. |
-| `coverage_report.md` | Exactly how much of the requested schema is fillable for free, per column and per competition, plus a squad-list reconciliation against the actual qualified 48. |
-| `wc2026_power.json` | The live forecast: per-team Elo, current points, and probabilities of winning the group / reaching each round / lifting the trophy. |
+This rewrites everything in [`data/`](data/) and re-embeds the latest forecast into `index.html`.
+Standard library only — no `pip install`. (If your Python lacks root CA certificates,
+`pip install certifi` and it's picked up automatically.)
 
 ## How the forecast works
 
-- **Elo**: World-Football-style Elo (margin-of-victory multiplier, match-importance weighting,
-  +100 home advantage) computed from scratch over **every** men's international since 1872, using
-  the open results history.
-- **Live conditioning**: actual 2026 group results so far are *locked in*; only the remaining
-  fixtures and the knockout rounds are simulated.
-- **Real format**: 30,000 Monte-Carlo runs of the genuine 2026 structure — 12 groups, **32 of 48
-  advance** (top 2 of each group + the 8 best third-placed), then the official Round-of-32 → Final
-  bracket. Hosts (USA/Canada/Mexico) get a modest +50 Elo home bump. Played knockout results are
-  locked in too, so the model stays correct as the bracket unfolds.
+1. **Elo** — World-Football-style Elo (importance weighting K, margin-of-victory multiplier, +100
+   home advantage) computed from scratch over **every men's international since 1872** (~49,000 matches).
+2. **Goal model** — for simulated group games, each side's expected goals scale with the rating gap,
+   `λ = base · 10^(±γ·d/400)`, with `base` and `γ` **maximum-likelihood-fit** to recent competitive
+   scorelines (no new data). Mismatches produce more goals and real blowouts. Knockout winners come
+   straight from the Elo win-probability.
+3. **Live conditioning** — actual 2026 results are **locked in** (group and knockout); only unplayed
+   fixtures are simulated. Every panel reads from this one simulation, so they all move together.
+4. **Betting-market blend** *(optional — see below)* — pulls each team's strength toward the de-vigged
+   market, which prices in injuries, form and squad changes Elo can't see.
+5. **Monte-Carlo** — the real 2026 format (12 groups, top-2 + 8 best third-placed → official
+   Round-of-32 → Final, hosts +50 Elo) run **50,000 times** (30,000 for the in-browser refresh).
+   The percentages are simply how often each thing happened.
 
-Every panel — Title Odds, Road to the Final, Who Escapes Each Group, the KPIs — reads from this one
-simulation, so they all reflect the live results together.
+### Confidence scores
+
+- **Data confidence** = `0.45·coverage + 0.20·recency + 0.35·source-quality` (friendlies are
+  discounted as low-signal).
+- **Forecast confidence** (per number) = 100 − Monte-Carlo sampling margin − unplayed-share penalty −
+  a fixed honesty discount (15, or 8 when the market blend is on). It can never read 100.
 
 ### Keeping it live
 
-Two independent ways to refresh after matches are played:
+1. **In the browser** — the Forecast tab's **"↻ Refresh with live results"** button re-runs the full
+   simulation client-side (~30k runs, a couple of seconds) from current match data. No rebuild.
+2. **Rebuild the snapshot** — `python3 tools/build_wc2026_dataset.py` then commit; this refreshes
+   `data/` and the numbers baked into `index.html`. Wire it to a daily CI job to stay fresh.
 
-1. **In the browser** — the 2026 Forecast tab has a **"↻ Refresh with live results"** button that
-   re-runs the full simulation client-side (≈20k runs, a couple of seconds) from the current match
-   data. No rebuild, no redeploy — anyone visiting the site can get up-to-the-minute numbers.
-2. **Rebuild the snapshot** — run `python3 tools/build_wc2026_dataset.py` and commit; this also
-   refreshes the numbers baked into `index.html` (the instant-load default) and the files in
-   `data/`. Wire it to a daily CI job if you want the default snapshot to stay fresh automatically.
+## Optional accuracy boosters (still €0)
 
-### Honest caveats
+All built-in; each is off until you provide the input.
 
-- This is a pure **team-strength** model. It does **not** know about squad turnover, ageing
-  players, injuries or current form — *Germany 2026 ≠ Germany 2022*. Treat the outputs as
-  **probabilities, not predictions**; knockout football is high-variance.
-- At €0, extended match statistics (shots, possession, xG, cards, …) simply do not exist for
-  friendlies and minor-confederation qualifiers, so those CSV columns are empty by design. The
-  highest-signal free feature — Elo — is provided instead.
-
-## Making it more accurate (all €0)
-
-- **Calibrated goal model** — the two goal-model constants are not guessed; the pipeline MLE-fits
-  them to the recent competitive scorelines it already downloads (no new data). Each side's expected
-  goals scale with the Elo gap, so real blowouts are possible.
-- **Manual strength overrides** (`data/adjustments.json`) — fold in two signals Elo can't see, by
-  hand, for free. Copy [`data/adjustments.example.json`](data/adjustments.example.json) to
-  `data/adjustments.json` and edit:
+- **Manual strength overrides** (`data/adjustments.json`) — copy
+  [`data/adjustments.example.json`](data/adjustments.example.json) and edit:
   - **Squad value** — paste ~48 squad market-value figures from Transfermarkt's public "most valuable
-    national teams" page (no scraping). They're z-scored into an Elo adjustment.
+    national teams" page (no scraping); z-scored into an Elo adjustment.
   - **Injuries / suspensions / judgement** — a direct per-team Elo nudge (e.g. `-30` for a key player out).
-  Overrides are applied at freeze time, so they flow through the simulation, the embedded numbers
-  **and** the in-browser refresh. No file → no change.
-- **Bookmaker-odds blend** (wired in — the single biggest lever) — set a free
-  [the-odds-api](https://the-odds-api.com/) key in your environment and the pipeline pulls **two**
-  de-vigged WC2026 markets and feeds both into the ratings (they price in injuries, form and squad
-  changes that pure Elo can't):
-  - **Outright winner** — regressed into Elo units; each team's frozen Elo is pulled halfway toward it.
-  - **Match (h2h)** odds for upcoming games — an extra pairwise nudge.
+  Applied at freeze time, so they flow through the simulation, the embed **and** the in-browser refresh.
+- **Bookmaker-odds blend** — set a free [the-odds-api](https://the-odds-api.com/) key in your
+  environment and the pipeline pulls **two** de-vigged WC2026 markets:
+  - **Outright winner** — regressed into Elo units; each team pulled halfway toward it.
+  - **Match (h2h)** — an extra pairwise nudge for upcoming games.
 
   ```bash
   ODDS_API_KEY=your_key_here python3 tools/build_wc2026_dataset.py
   ```
 
-  The key is read **only** from the `ODDS_API_KEY` environment variable — it is never committed and
-  never sent to the browser. The market signal flows through every forecast number (title odds,
-  group-stage exit = 1 − reach-knockout, road to the final…); the Title Odds panel marks the market's
-  number next to ours, and the collected odds are saved to `data/wc2026_odds.csv` (Export → Market
-  odds). the-odds-api only sells the winner + match markets — there's no discrete "group exit" market,
-  so those stage probabilities are our model's, now market-informed. Without the key the blend is
-  simply skipped. Simulations: **50,000** in the pipeline, 30,000 for the in-browser refresh.
+  The key is read **only** from the `ODDS_API_KEY` environment variable — never committed, never sent
+  to the browser; we publish our Elo-derived forecast, not the raw odds (the collected odds save to
+  `data/wc2026_odds.csv` for your own use, with attribution). the-odds-api sells only the winner +
+  match markets, so stage probabilities like group-stage-exit (= 1 − reach-knockout) are our model's,
+  now market-informed. Without the key, the blend is simply skipped.
+
+> Honest note: the blend weight (50%) and any injury nudges are judgement calls and aren't backtested —
+> treat them as informed adjustments, not gospel.
+
+## What's in `data/`
+
+| File | Contents |
+|---|---|
+| `wc2026_team_match_log.csv` | One row per team per match for the WC2026 nations, Jan 2022 → Jun 10 2026: date, competition, season, stage, team, confederation, opponent, home/away, goals, result, venue + pre-match **Elo** (`elo_pre`, `opp_elo_pre`, `elo_win_prob`, `elo_post`, `elo_change`). Extended stats (shots, possession, xG, cards) are blank — they don't exist for free across all these matches. |
+| `coverage_report.md` | How much of the requested schema is fillable for free, per column and per competition, plus a squad-list reconciliation against the actual qualified 48. |
+| `wc2026_power.json` | The live forecast: per-team Elo, current points, recent form, market title prob, and probabilities of winning the group / reaching each round / lifting the trophy, with confidence metadata. |
+| `wc2026_odds.csv` | *(only when built with `ODDS_API_KEY`)* de-vigged winner + match odds, bookmaker-averaged. Odds via the-odds-api.com. |
+| `adjustments.example.json` | Template for the optional manual strength overrides. |
+
+## Caveats
+
+- Even with the market blend, this can't fully see who's injured or in form; knockout football is
+  high-variance. Outputs are **probabilities, not predictions**.
+- Goal/scorer figures follow the openfootball dataset, which has incomplete goal detail for several
+  mid-century editions — historical scorer lists reflect *recorded* goals, not the official record.
+
+## Deploy (Netlify)
+
+It's a static site — no build. [`netlify.toml`](netlify.toml) sets `publish = "."` and an empty build
+command. In the Netlify UI, leave **Base directory blank** (the common gotcha) and it serves
+`index.html` from the repo root. For the optional market blend in CI, add `ODDS_API_KEY` as a build
+environment variable / secret.
 
 ## Data sources & credits
 
-- **[openfootball/worldcup.json](https://github.com/openfootball/worldcup.json)** — historical
-  match data and the 2026 schedule/bracket (CC0 / public domain).
-- **[martj42/international_results](https://github.com/martj42/international_results)** — the
-  complete international results history used to compute Elo (CC0).
+- **[openfootball/worldcup.json](https://github.com/openfootball/worldcup.json)** — historical match
+  data and the 2026 schedule/bracket (CC0 / public domain).
+- **[martj42/international_results](https://github.com/martj42/international_results)** — international
+  results history used for Elo and form (CC0).
+- **[the-odds-api.com](https://the-odds-api.com/)** — optional betting-market odds.
 - Elo methodology after **[World Football Elo Ratings](https://eloratings.net/)**.
 
-FIFA also publishes an official read-only API (the "Give Voice to Football" FAPIs); it is richer
-but sits behind a WAF that blocks non-browser clients, so it is documented in the almanac but not
-used as a live feed.
+FIFA also publishes an official read-only API (the "Give Voice to Football" FAPIs); it's richer but
+sits behind a WAF that blocks non-browser clients, so it's documented in the almanac but not used as a
+live feed.
 
 ## Project structure
 
 ```
 world-cup-almanac/
-├── index.html                     # the almanac (open in a browser)
+├── index.html                       # the almanac (open in a browser)
+├── netlify.toml                     # static-site deploy config
 ├── tools/
-│   └── build_wc2026_dataset.py    # the €0 data + forecast pipeline
+│   └── build_wc2026_dataset.py      # the data + forecast pipeline
 ├── data/
-│   ├── wc2026_team_match_log.csv
-│   ├── coverage_report.md
-│   └── wc2026_power.json
-├── requirements.txt
+│   ├── wc2026_team_match_log.csv    # per-team-per-match log + Elo
+│   ├── coverage_report.md           # what's fillable for free
+│   ├── wc2026_power.json            # the live forecast (embedded into index.html)
+│   ├── wc2026_odds.csv              # collected market odds (only if built with a key)
+│   └── adjustments.example.json     # template for manual strength overrides
+├── requirements.txt                 # (none required; certifi optional)
 ├── LICENSE
 └── README.md
 ```
 
 ## License
 
-Code: MIT (see [LICENSE](LICENSE)). Data is redistributed from the public-domain sources credited
-above; please respect their terms.
+Code: MIT (see [LICENSE](LICENSE)). Redistributed data remains under its sources' terms (credited
+above); market odds are subject to the-odds-api's terms.
