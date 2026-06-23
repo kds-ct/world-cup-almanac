@@ -1,0 +1,58 @@
+name: Daily forecast rebuild
+
+# Re-runs the €0 pipeline once a day: recomputes Elo over the full results history,
+# pulls the latest 2026 results, re-runs the Monte-Carlo, and commits the refreshed
+# data/ + the numbers embedded in index.html. Netlify redeploys on the push.
+
+on:
+  schedule:
+    - cron: "0 9 * * *"      # 09:00 UTC daily (GitHub may run it a little late under load)
+  workflow_dispatch: {}       # lets you trigger it by hand from the Actions tab
+
+# Allow the job to push the refreshed data back to the repo.
+permissions:
+  contents: write
+
+# Never let two rebuilds run at once.
+concurrency:
+  group: daily-rebuild
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install optional CA certs
+        run: pip install --quiet certifi   # the pipeline picks this up automatically for SSL
+
+      - name: Rebuild dataset + embedded forecast
+        env:
+          # Optional. If you add a free the-odds-api key as a repo secret named ODDS_API_KEY,
+          # the market blend turns back on; with no secret this is empty and the blend is skipped.
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: python3 tools/build_wc2026_dataset.py
+
+      - name: Sanity-check the outputs
+        run: |
+          python3 -c "import json,sys; json.load(open('data/wc2026_power.json')); print('power.json OK')"
+          grep -q 'const WC2026={sims:' index.html && echo "index.html embed OK"
+
+      - name: Commit & push if anything changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/ index.html
+          if git diff --cached --quiet; then
+            echo "No changes today — nothing to commit."
+          else
+            git commit -m "chore: daily forecast rebuild ($(date -u +%Y-%m-%d))"
+            git push
+          fi
