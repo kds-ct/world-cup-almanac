@@ -36,6 +36,11 @@ Two pieces, one repo, no build step:
   scores**, a **History-window slider** (recompute each team's Elo from only the internationals since a
   year you pick — the full results history is replayed live in your browser), and a "↻ Refresh with live
   results" button that re-runs the whole simulation.
+- **The Maths** — a "show your working" tab that lays out every formula behind the forecast (Elo, the
+  Poisson goal model, Monte-Carlo, the market & FIFA blends, the confidence scores) and plugs in the
+  **actual numbers the model is using right now**. Pick any two teams and it walks one calculation
+  end-to-end — strength anchor → win probability → expected goals → a colour-coded scoreline grid — plus
+  a "simulate this match 20,000×" button that shows Monte-Carlo converging on the analytic answer.
 - **Export CSV** — all matches (1930–2026), all goals, all group standings, the 2026 forecast, and the
   collected market odds. Matches/goals/standings and the forecast carry the **live** ESPN-overlaid state
   (the forecast CSV is tagged `data_state=live` once you've refreshed, `snapshot` otherwise, with an

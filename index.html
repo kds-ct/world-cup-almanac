@@ -64,6 +64,8 @@ select#edition{appearance:none;background:var(--panel);color:var(--ink);border:1
   font-family:"Bebas Neue";font-size:24px;letter-spacing:.04em;padding:8px 42px 8px 16px;cursor:pointer;min-width:230px}
 .sel-wrap::after{content:"▾";position:absolute;right:16px;top:50%;transform:translateY(-45%);color:var(--gold);pointer-events:none;font-size:13px}
 select#edition:focus{outline:2px solid var(--grass);outline-offset:1px}
+select.sel{appearance:none;background:var(--panel);color:var(--ink);border:1px solid var(--line2);border-radius:var(--r-sm);font:inherit;font-size:13px;font-weight:700;padding:7px 12px;cursor:pointer;max-width:210px}
+select.sel:focus{outline:2px solid var(--grass);outline-offset:1px}
 .xbtn{appearance:none;border:1px solid var(--line2);background:var(--panel);color:var(--gold);font-family:"Archivo";font-weight:700;font-size:12px;letter-spacing:.05em;text-transform:uppercase;padding:11px 16px;border-radius:999px;cursor:pointer}
 .xbtn:hover{border-color:var(--gold);color:#ffe9a8}
 .xbtn:focus-visible{outline:2px solid var(--grass);outline-offset:2px}
@@ -263,6 +265,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}
         <button data-view="tournament" class="on" aria-pressed="true">Tournament</button>
         <button data-view="alltime" aria-pressed="false">All-Time</button>
         <button data-view="forecast" aria-pressed="false">2026 Forecast</button>
+        <button data-view="maths" aria-pressed="false">The Maths</button>
       </div>
       <div class="sel-wrap" id="edWrap">
         <label for="edition">Edition</label>
@@ -1262,6 +1265,144 @@ function wireEloRange(){
   });
 }
 
+/* ============================== RENDER: THE MATHS ============================== */
+let MATHS_A=null, MATHS_B=null;
+const _fact=n=>{let f=1;for(let i=2;i<=n;i++)f*=i;return f;};
+const poisPmf=(lam,k)=>Math.exp(-lam)*Math.pow(lam,k)/_fact(k);
+const mfix=(x,d=0)=>Number(x).toFixed(d);
+function mathsHTML(){
+  const T=WC2026.teams;
+  const opts=T.slice().sort((a,b)=>a.t.localeCompare(b.t));
+  const byTitle=T.slice().sort((a,b)=>b.ti-a.ti);
+  if(!MATHS_A||!T.find(t=>t.t===MATHS_A)) MATHS_A=byTitle[0].t;
+  if(!MATHS_B||!T.find(t=>t.t===MATHS_B)||MATHS_B===MATHS_A) MATHS_B=(byTitle.find(t=>t.t!==MATHS_A)||byTitle[1]).t;
+  const A=T.find(t=>t.t===MATHS_A), B=T.find(t=>t.t===MATHS_B);
+  /* --- the exact strength anchor the simulator uses --- */
+  const feA=A.fe!=null?A.fe:A.e, feB=B.fe!=null?B.fe:B.e;
+  const RA=(1-FIFA_W)*A.e+FIFA_W*feA, RB=(1-FIFA_W)*B.e+FIFA_W*feB;
+  const hA=A.h?HOST_BUMP:0, hB=B.h?HOST_BUMP:0;
+  const d=(RA+hA)-(RB+hB);
+  const weA=eExp(d);
+  const cl=x=>Math.min(6,Math.max(0.05,x));
+  const lamA=cl(GOAL_BASE*Math.pow(10,GOAL_GAMMA*d/400)), lamB=cl(GOAL_BASE*Math.pow(10,-GOAL_GAMMA*d/400));
+  const MX=6; let pW=0,pD=0,pL=0,mx=0,mi=0,mj=0; const cell=[];
+  for(let i=0;i<=MX;i++){cell[i]=[];for(let j=0;j<=MX;j++){const p=poisPmf(lamA,i)*poisPmf(lamB,j);cell[i][j]=p;if(i>j)pW+=p;else if(i===j)pD+=p;else pL+=p;if(p>mx){mx=p;mi=i;mj=j;}}}
+  const mono="font-family:ui-monospace,SFMono-Regular,Menlo,monospace";
+  const F=(lab,formula,res)=>`<div style="padding:8px 0;border-bottom:1px solid var(--line)">
+    <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:4px">${lab}</div>
+    <div style="${mono};font-size:12.5px;color:var(--ink);line-height:1.65;overflow-wrap:anywhere">${formula}${res!=null?` &nbsp;<span style="color:var(--gold);font-weight:700">= ${res}</span>`:``}</div></div>`;
+  const optsHtml=sel=>opts.map(t=>`<option value="${escapeHtml(t.t)}"${t.t===sel?" selected":""}>${escapeHtml(t.t)}</option>`).join("");
+
+  let html=`<div class="grid">`;
+
+  /* 0 — overview */
+  html+=`<section class="panel col-12 reveal" style="padding:15px 20px"><p class="note" style="margin:0">
+    <b style="color:var(--gold)">Show your working.</b> This page lays out every formula in the 2026 model and plugs in the <b style="color:var(--ink)">numbers it is actually using right now</b> — so you can check the maths, not just trust it. The seven steps: <b>1·</b> rate each team (<i>Elo</i>) → <b>2·</b> blend in the official <i>FIFA</i> ranking and the betting <i>market</i> → <b>3·</b> turn a rating gap into a win probability → <b>4·</b> into expected goals (<i>Poisson</i>) → <b>5·</b> play the tournament 50,000× (<i>Monte-Carlo</i>) → <b>6·</b> lock in real results as they happen → <b>7·</b> attach a <i>confidence</i> score. Everything below recomputes live; pick two teams and follow one calculation all the way through.</p></section>`;
+
+  /* 1 — matchup calculator */
+  html+=`<section class="panel col-12 reveal"><div class="phead"><h2>Worked example — one match</h2><span class="meta">pick any two teams</span></div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <select id="mathsA" class="sel">${optsHtml(MATHS_A)}</select>
+      <button id="mathsSwap" class="xbtn" title="Swap" style="padding:6px 11px">vs ⇄</button>
+      <select id="mathsB" class="sel">${optsHtml(MATHS_B)}</select>
+      <span style="font-size:11px;color:var(--muted2)">${(A.h||B.h)?`${A.h?escapeHtml(A.t):escapeHtml(B.t)} is a host → +${HOST_BUMP} Elo`:`neutral venue`}</span>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 26px">
+      <div>
+        ${F("① Strength anchor — blend live Elo with the FIFA-equivalent Elo",`R = (1−w)·Elo + w·FIFA<sub>eq</sub>,&nbsp; w = ${FIFA_W}<br>R<sub>${escapeHtml(A.t)}</sub> = ${(1-FIFA_W).toFixed(2)}·${A.e} + ${FIFA_W}·${feA}`,`${mfix(RA)}`)}
+        ${F("strength of the opponent",`R<sub>${escapeHtml(B.t)}</sub> = ${(1-FIFA_W).toFixed(2)}·${B.e} + ${FIFA_W}·${feB}`,`${mfix(RB)}`)}
+        ${F("② Rating gap (with any host bump)",`d = (${mfix(RA)}${hA?`+${hA}`:``}) − (${mfix(RB)}${hB?`+${hB}`:``})`,`${mfix(d)} Elo`)}
+        ${F("③ Win probability (the Elo curve)",`p = 1 / (1 + 10<sup>−d/400</sup>) = 1 / (1 + 10<sup>${mfix(-d/400,2)}</sup>)`,`${mfix(weA,3)} → ${escapeHtml(A.t)} ${Math.round(weA*100)}%`)}
+        ${F("④ Expected goals each (Poisson rate λ)",`λ = ${GOAL_BASE}·10<sup>±${GOAL_GAMMA}·d/400</sup><br>λ<sub>${escapeHtml(A.t)}</sub> = ${GOAL_BASE}·10<sup>${mfix(GOAL_GAMMA*d/400,3)}</sup> = <b style="color:var(--gold)">${mfix(lamA,2)}</b> &nbsp; λ<sub>${escapeHtml(B.t)}</sub> = <b style="color:var(--gold)">${mfix(lamB,2)}</b>`)}
+      </div>
+      <div>
+        <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin:8px 0 6px">⑤ Scoreline distribution &nbsp;<span style="text-transform:none;letter-spacing:0;color:var(--muted2)">P(i,j)=e<sup>−λ<sub>A</sub></sup>λ<sub>A</sub><sup>i</sup>/i! · e<sup>−λ<sub>B</sub></sup>λ<sub>B</sub><sup>j</sup>/j!</span></div>
+        <div style="overflow-x:auto"><table style="border-collapse:collapse;font-size:10.5px;${mono}">
+          <tr><td></td><td colspan="${MX+1}" style="text-align:center;color:var(--muted);padding-bottom:3px">${escapeHtml(B.t)} goals →</td></tr>
+          <tr><td style="color:var(--muted);padding:2px 5px">${escapeHtml(A.t).slice(0,3).toUpperCase()}↓</td>${Array.from({length:MX+1},(_,j)=>`<td style="text-align:center;color:var(--muted);padding:2px 5px">${j}</td>`).join("")}</tr>
+          ${Array.from({length:MX+1},(_,i)=>`<tr><td style="color:var(--muted);padding:2px 5px">${i}</td>${Array.from({length:MX+1},(_,j)=>{const p=cell[i][j],hot=(i===mi&&j===mj);return `<td style="text-align:center;padding:3px 5px;background:rgba(244,200,74,${(p/mx*0.82).toFixed(3)});${hot?"outline:2px solid var(--gold);font-weight:700;color:var(--ink)":"color:var(--ink)"}">${(p*100).toFixed(0)}</td>`;}).join("")}</tr>`).join("")}
+        </table></div>
+        <p class="note" style="margin-top:8px">Most likely score <b style="color:var(--ink)">${mi}–${mj}</b> (${(mx*100).toFixed(1)}%). Summing the grid: <b style="color:var(--gold)">${escapeHtml(A.t)} win ${(pW*100).toFixed(1)}%</b> · draw ${(pD*100).toFixed(1)}% · ${escapeHtml(B.t)} win ${(pL*100).toFixed(1)}%. <span style="color:var(--muted2)">(The win % differs slightly from the Elo p in ③ because Poisson explicitly allows draws.)</span></p>
+        <button id="mathsSim" class="xbtn" style="color:var(--grass);margin-top:4px">▶ Simulate this match 20,000×</button>
+        <div id="mathsSimOut" style="font-size:12px;color:var(--muted);margin-top:8px"></div>
+      </div>
+    </div></section>`;
+
+  /* 2 — Elo update */
+  const draw=mi===mj, wA=draw?0.5:(mi>mj?1:0), Gm=gMult(mi-mj), dRaw=60*Gm*(wA-weA);
+  html+=`<section class="panel col-7 reveal"><div class="phead"><h2>Step 1 · Elo update</h2><span class="meta">how a result moves a rating</span></div>
+    <div style="${mono};font-size:13px;color:var(--ink);background:var(--bg2,rgba(255,255,255,.03));padding:10px 13px;border-radius:8px;border:1px solid var(--line);margin-bottom:10px">R′ = R + K · G · (W − W<sub>e</sub>)</div>
+    <p class="note" style="margin:0 0 8px">Replayed over <b style="color:var(--ink)">every men's international since 1872</b> (~49,000 matches). <b>W</b> is the result (1 win / ½ draw / 0 loss), <b>W<sub>e</sub></b> the expected result from ③, <b>K</b> the match importance, <b>G</b> a margin-of-victory multiplier.</p>
+    ${F(`Worked: if ${escapeHtml(A.t)} got a ${mi}–${mj} here in a World Cup match (K=60)`,`G(${mi}−${mj}) = ${Gm}, &nbsp; W = ${wA}, &nbsp; W<sub>e</sub> = ${mfix(weA,3)}<br>ΔR = 60 · ${Gm} · (${wA} − ${mfix(weA,3)})`,`${dRaw>=0?"+":""}${mfix(dRaw,1)} Elo → new R<sub>${escapeHtml(A.t)}</sub> ≈ ${Math.round(A.e+dRaw)}`)}
+    <div style="display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;font-size:11.5px;color:var(--muted)">
+      <div><b style="color:var(--ink)">K (importance)</b><br>World Cup 60 · continental 50 · qualifier / Nations League 40 · minor 30 · friendly 20</div>
+      <div><b style="color:var(--ink)">G (margin)</b><br>≤1 goal ×1.0 · by 2 ×1.5 · by n (≥3) ×(11+n)/8 · home +100 Elo</div>
+    </div></section>`;
+
+  /* 3 — FIFA rescale */
+  const e0arr=T.map(t=>t.e0), fparr=T.filter(t=>t.fpt!=null).map(t=>t.fpt);
+  const mean=z=>z.reduce((s,x)=>s+x,0)/z.length, sd=(z,m)=>Math.sqrt(z.reduce((s,x)=>s+(x-m)*(x-m),0)/z.length)||1;
+  const me=mean(e0arr), se=sd(e0arr,me), mf=mean(fparr), sf=sd(fparr,mf), feCalc=me+(A.fpt-mf)*(se/sf);
+  html+=`<section class="panel col-5 reveal"><div class="phead"><h2>Step 2 · FIFA blend</h2><span class="meta">a second opinion</span></div>
+    <p class="note" style="margin:0 0 8px">FIFA's ranking is also an Elo, on a tighter scale. We <b>z-score-match</b> its points onto our scale, then pull the anchor ${Math.round(FIFA_W*100)}% toward it (step ① above).</p>
+    ${F(`across the 48 teams`,`mean Elo ${mfix(me)}, sd ${mfix(se)}<br>mean FIFA ${mfix(mf)}, sd ${mfix(sf)}`)}
+    ${F(`FIFA-equivalent Elo for ${escapeHtml(A.t)}`,`${mfix(me)} + (${A.fpt}−${mfix(mf)})·(${mfix(se)}/${mfix(sf)})`,`${mfix(feCalc)} &nbsp;<span style="color:var(--muted2);font-weight:400">(stored ${A.fe})</span>`)}</section>`;
+
+  /* 4 — Monte-Carlo */
+  const fav=byTitle[0], p=fav.ti, Ns=WC2026.sims, seP=Math.sqrt(Math.max(p*(1-p),0)/Ns), ciH=ci95(p,Ns);
+  html+=`<section class="panel col-7 reveal"><div class="phead"><h2>Step 3 · Monte-Carlo</h2><span class="meta">probability = a tally</span></div>
+    <p class="note" style="margin:0 0 8px">We play the whole tournament — 12 groups, 32 of 48 advance (top 2 + 8 best thirds), then the bracket — <b style="color:var(--ink)">${Ns.toLocaleString()} times</b>, each game rolled with the Poisson dice from ④. The probability is simply how often something happened.</p>
+    ${F(`${escapeHtml(fav.t)} lifted the trophy in`,`${Math.round(p*Ns).toLocaleString()} of ${Ns.toLocaleString()} runs`,`${(p*100).toFixed(1)}%`)}
+    ${F(`how steady is that number? (standard error)`,`SE = √(p(1−p)/N) = √(${mfix(p,3)}·${mfix(1-p,3)}/${Ns.toLocaleString()})`,`${(seP*100).toFixed(2)} pp`)}
+    ${F(`95% confidence interval`,`±1.96 · SE`,`±${(ciH*100).toFixed(2)} pp`)}
+    <p class="note" style="margin-top:6px">Error shrinks like <b>1/√N</b>: to halve it you need <b>4×</b> the runs. That's why 50,000 is far steadier than 1,000 — and you can watch it converge with the <b>Simulate 20,000×</b> button above.</p></section>`;
+
+  /* 5 — Confidence */
+  const dc=WC2026.conf||{C:100,R:100,S:84,data:94};
+  const penMc=Math.min(30,100*ciH/Math.max(p,0.02)), penRes=25*unplayedFrac(), pen=structPenalty(), fconf=fcConf(p,Ns);
+  html+=`<section class="panel col-5 reveal"><div class="phead"><h2>Step 4 · Confidence</h2><span class="meta">how much to trust it</span></div>
+    ${F(`data confidence (inputs)`,`0.45·${dc.C} + 0.20·${dc.R} + 0.35·${dc.S}`,`${dc.data}/100`)}
+    ${F(`forecast confidence (${escapeHtml(fav.t)} title)`,`100 − ${mfix(penMc,1)} <span style="color:var(--muted2)">(sampling)</span> − ${mfix(penRes,1)} <span style="color:var(--muted2)">(${Math.round(unplayedFrac()*100)}% unplayed)</span> − ${pen} <span style="color:var(--muted2)">(honesty)</span>`,`${fconf}/100`)}
+    <p class="note" style="margin-top:6px">The fixed <b>${pen}-point honesty discount</b> never goes away — no model truly knows who's injured or in form — which is why confidence <b>never reads 100</b>.</p></section>`;
+
+  /* 6 — market + live conditioning */
+  html+=`<section class="panel col-12 reveal"><div class="phead"><h2>Steps 5 &amp; 6 · Market blend &amp; live conditioning</h2><span class="meta">where the live numbers come in</span></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 26px">
+      <div>${F(`De-vig the betting market (remove the bookmaker margin)`,`two outcomes priced 2.00 & 2.10 → implied ½=0.500, 1/2.1=0.476<br>overround = 0.976 → de-vigged 0.500/0.976, 0.476/0.976`,`0.512 / 0.488`)}
+        <p class="note" style="margin-top:6px">Each team's strength is then pulled <b>50% toward</b> the de-vigged market — it prices in injuries and form our Elo can't see. ${WC2026.mb?`<span style="color:var(--grass)">On for this build.</span>`:`<span style="color:var(--muted2)">Off in this build (no odds key).</span>`}</p></div>
+      <div>${F(`Live conditioning — lock what's real, simulate the rest`,`${WC2026.playedAll||0} of ${WC2026.totalAll||104} matches played → fixed<br>only the ${(WC2026.totalAll||104)-(WC2026.playedAll||0)} remaining are simulated`,`as of ${WC2026.asOf}`)}
+        <p class="note" style="margin-top:6px">Every played group and knockout result is locked in before the ${Ns.toLocaleString()} runs, so the forecast, standings and brackets all move together as games finish.</p></div>
+    </div></section>`;
+
+  /* 7 — constants */
+  html+=`<section class="panel col-12 reveal" style="padding:13px 20px"><p class="note" style="margin:0"><b style="color:var(--ink)">The constants, all in one place:</b> &nbsp;goal model <code>base=${GOAL_BASE}</code>, <code>γ=${GOAL_GAMMA}</code> (maximum-likelihood-fit to real competitive scorelines, λ capped at 6) · FIFA blend weight <code>w=${FIFA_W}</code> · host bump <code>+${HOST_BUMP}</code> Elo · simulations <code>N=${Ns.toLocaleString()}</code> · Elo base 1500, scale 400. Every figure on this page is computed in your browser from the live model — change the teams and watch it all recompute.</p></section>`;
+
+  html+=`</div>`;
+  return html;
+}
+function wireMaths(){
+  const sa=document.getElementById("mathsA"), sb=document.getElementById("mathsB");
+  const repaint=()=>{ app.innerHTML=mathsHTML(); animateIn(); wireMaths(); };
+  if(sa) sa.addEventListener("change",()=>{ MATHS_A=sa.value; repaint(); });
+  if(sb) sb.addEventListener("change",()=>{ MATHS_B=sb.value; repaint(); });
+  const sw=document.getElementById("mathsSwap");
+  if(sw) sw.addEventListener("click",()=>{ const t=MATHS_A; MATHS_A=MATHS_B; MATHS_B=t; repaint(); });
+  const sim=document.getElementById("mathsSim");
+  if(sim) sim.addEventListener("click",()=>{
+    const A=WC2026.teams.find(t=>t.t===MATHS_A), B=WC2026.teams.find(t=>t.t===MATHS_B); if(!A||!B) return;
+    const feA=A.fe!=null?A.fe:A.e, feB=B.fe!=null?B.fe:B.e;
+    const RA=(1-FIFA_W)*A.e+FIFA_W*feA, RB=(1-FIFA_W)*B.e+FIFA_W*feB;
+    const d=(RA+(A.h?HOST_BUMP:0))-(RB+(B.h?HOST_BUMP:0));
+    const cl=x=>Math.min(6,Math.max(0.05,x));
+    const lamA=cl(GOAL_BASE*Math.pow(10,GOAL_GAMMA*d/400)), lamB=cl(GOAL_BASE*Math.pow(10,-GOAL_GAMMA*d/400));
+    const pois=lam=>{const L=Math.exp(-lam);let k=0,p=1;do{k++;p*=Math.random();}while(p>L);return k-1;};
+    const N=20000; let w=0,dr=0,l=0,ga=0,gb=0;
+    for(let s=0;s<N;s++){const x=pois(lamA),y=pois(lamB);ga+=x;gb+=y;if(x>y)w++;else if(x===y)dr++;else l++;}
+    const out=document.getElementById("mathsSimOut");
+    if(out) out.innerHTML=`<b>${N.toLocaleString()} simulated matches → </b>${escapeHtml(MATHS_A)} win <b style="color:var(--gold)">${(100*w/N).toFixed(1)}%</b> · draw <b>${(100*dr/N).toFixed(1)}%</b> · ${escapeHtml(MATHS_B)} win <b>${(100*l/N).toFixed(1)}%</b> · avg score <b>${(ga/N).toFixed(2)}–${(gb/N).toFixed(2)}</b>. <span style="color:var(--muted2)">Converges to the analytic grid as N grows.</span>`;
+  });
+}
+
 /* ============================== ORCHESTRATION ============================== */
 const app=document.getElementById("app");
 const state={view:"tournament",year:2026};
@@ -1297,6 +1438,13 @@ async function render(){
       document.getElementById("hSub").innerHTML=`Every men's World Cup combined — titles, all-time goals, appearances and the long-run scoring trend. Loading all 23 editions…`;
       showLoading("Crunching 23 tournaments…");
       app.innerHTML=await alltimeHTML();
+    } else if(state.view==="maths"){
+      document.getElementById("edWrap").style.display="none";
+      document.getElementById("hTitle").textContent="The Maths";
+      document.getElementById("liveTag").textContent="worked examples";
+      document.getElementById("hSub").innerHTML=`Every formula behind the 2026 forecast — <b>Elo</b>, the <b>Poisson</b> goal model, <b>Monte-Carlo</b>, the market &amp; FIFA blends and the confidence scores — each shown with the <b>actual numbers</b> the model is using right now. Pick any two teams to walk a real calculation end-to-end.`;
+      app.innerHTML=mathsHTML();
+      wireMaths();
     } else {
       document.getElementById("edWrap").style.display="none";
       document.getElementById("hTitle").textContent="2026 Forecast";

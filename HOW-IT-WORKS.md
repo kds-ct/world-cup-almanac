@@ -2,6 +2,9 @@
 
 *A guide you can read once and then explain to your class. No stats degree required.*
 
+> 💡 The almanac has a **"The Maths"** tab that shows every formula below with the **live numbers** plugged
+> in — pick two teams and watch one calculation run end-to-end. Great to demo alongside this guide.
+
 ---
 
 ## The 60-second version
