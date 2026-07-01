@@ -1,69 +1,63 @@
 # odds via the-odds-api.com; decimal odds averaged across EU/UK bookmakers; devig = vig-removed probability
 market,match,team_or_outcome,avg_decimal_odds,devig_probability,n_bookmakers
-winner,,France,3.72,0.2592,5
-winner,,Argentina,5.12,0.1884,5
-winner,,Spain,8.46,0.1141,5
-winner,,England,8.78,0.1101,5
-winner,,Brazil,12.8,0.0755,5
-winner,,Portugal,16.2,0.0599,5
-winner,,Morocco,24.6,0.0393,5
-winner,,Colombia,35.4,0.0274,5
-winner,,USA,36.4,0.0265,5
-winner,,Norway,49.4,0.0196,5
-winner,,Mexico,58.2,0.0169,5
-winner,,Belgium,68.2,0.0143,5
-winner,,Switzerland,112.2,0.0088,5
-winner,,Ecuador,157.2,0.0062,5
-winner,,Senegal,162.2,0.0059,5
-winner,,Ivory Coast,252.2,0.0038,5
-winner,,Croatia,258.2,0.0039,5
-winner,,Canada,281.2,0.0038,5
-winner,,Paraguay,380.2,0.0028,5
-winner,,Sweden,396.2,0.0026,5
-winner,,Egypt,504.2,0.0021,5
-winner,,Austria,574.2,0.0019,5
-winner,,Australia,570.2,0.0018,5
-winner,,Ghana,650.2,0.0016,5
-winner,,Algeria,720.2,0.0015,5
+winner,,France,3.06,0.3132,5
+winner,,Argentina,5.54,0.173,5
+winner,,Spain,9.2,0.1042,5
+winner,,England,9.26,0.1039,5
+winner,,Brazil,13.2,0.0728,5
+winner,,Portugal,16.8,0.0574,5
+winner,,Morocco,32.2,0.0306,5
+winner,,Colombia,35.4,0.0272,5
+winner,,USA,39.6,0.0242,5
+winner,,Mexico,38.6,0.0251,5
+winner,,Norway,47.8,0.0209,5
+winner,,Belgium,72.2,0.0135,5
+winner,,Switzerland,116.2,0.0084,5
+winner,,Senegal,158.2,0.0061,5
+winner,,Croatia,266.2,0.0038,5
+winner,,Canada,419.2,0.0029,5
+winner,,Egypt,498.2,0.0021,5
+winner,,Austria,576.2,0.0019,5
+winner,,Paraguay,594.2,0.002,5
+winner,,Australia,562.2,0.0018,5
+winner,,Ghana,662.2,0.0015,5
+winner,,Algeria,794.2,0.0014,5
+winner,,Bosnia & Herzegovina,773.67,0.0013,3
 winner,,Cape Verde,833.67,0.0012,3
 winner,,DR Congo,833.67,0.0012,3
-winner,,Bosnia & Herzegovina,833.67,0.0012,3
-match_h2h,Ivory Coast v Norway,Ivory Coast,3.56,0.2698,46
-match_h2h,Ivory Coast v Norway,Norway,2.13,0.4511,46
-match_h2h,Ivory Coast v Norway,Draw,3.44,0.279,46
-match_h2h,France v Sweden,France,1.29,0.7446,46
-match_h2h,France v Sweden,Sweden,10.36,0.0936,46
-match_h2h,France v Sweden,Draw,5.95,0.1617,46
-match_h2h,Mexico v Ecuador,Ecuador,3.94,0.2435,46
-match_h2h,Mexico v Ecuador,Mexico,2.25,0.4253,46
-match_h2h,Mexico v Ecuador,Draw,2.89,0.3312,46
-match_h2h,England v DR Congo,DR Congo,13.71,0.071,44
-match_h2h,England v DR Congo,England,1.27,0.7532,44
-match_h2h,England v DR Congo,Draw,5.47,0.1758,44
-match_h2h,Belgium v Senegal,Belgium,2.21,0.4338,46
-match_h2h,Belgium v Senegal,Senegal,3.57,0.2684,46
-match_h2h,Belgium v Senegal,Draw,3.22,0.2977,46
-match_h2h,USA v Bosnia & Herzegovina,Bosnia & Herzegovina,8.99,0.1069,46
-match_h2h,USA v Bosnia & Herzegovina,USA,1.37,0.6969,46
-match_h2h,USA v Bosnia & Herzegovina,Draw,4.88,0.1962,46
-match_h2h,Spain v Austria,Austria,10.46,0.0927,46
-match_h2h,Spain v Austria,Spain,1.33,0.7226,46
-match_h2h,Spain v Austria,Draw,5.2,0.1847,46
-match_h2h,Portugal v Croatia,Croatia,5.02,0.1909,46
-match_h2h,Portugal v Croatia,Portugal,1.78,0.5375,46
-match_h2h,Portugal v Croatia,Draw,3.52,0.2716,46
-match_h2h,Switzerland v Algeria,Algeria,3.97,0.2406,46
-match_h2h,Switzerland v Algeria,Switzerland,2.06,0.4629,46
-match_h2h,Switzerland v Algeria,Draw,3.22,0.2965,46
-match_h2h,Australia v Egypt,Australia,3.4,0.2825,45
-match_h2h,Australia v Egypt,Egypt,2.49,0.3855,45
-match_h2h,Australia v Egypt,Draw,2.89,0.332,45
-match_h2h,Argentina v Cape Verde,Argentina,1.17,0.8241,45
-match_h2h,Argentina v Cape Verde,Cape Verde,19.12,0.0513,45
-match_h2h,Argentina v Cape Verde,Draw,7.75,0.1246,45
-match_h2h,Colombia v Ghana,Colombia,1.52,0.6298,45
-match_h2h,Colombia v Ghana,Ghana,7.63,0.1262,45
-match_h2h,Colombia v Ghana,Draw,3.93,0.244,45
-match_h2h,Canada v Morocco,Canada,5.09,0.1886,44
-match_h2h,Canada v Morocco,Morocco,1.76,0.5437,44
-match_h2h,Canada v Morocco,Draw,3.57,0.2677,44
+match_h2h,England v DR Congo,DR Congo,13.85,0.0706,42
+match_h2h,England v DR Congo,England,1.29,0.7429,42
+match_h2h,England v DR Congo,Draw,5.16,0.1866,42
+match_h2h,Belgium v Senegal,Belgium,2.15,0.4461,44
+match_h2h,Belgium v Senegal,Senegal,3.66,0.2627,44
+match_h2h,Belgium v Senegal,Draw,3.3,0.2912,44
+match_h2h,USA v Bosnia & Herzegovina,Bosnia & Herzegovina,8.41,0.1146,44
+match_h2h,USA v Bosnia & Herzegovina,USA,1.39,0.6877,44
+match_h2h,USA v Bosnia & Herzegovina,Draw,4.86,0.1976,44
+match_h2h,Spain v Austria,Austria,10.48,0.0921,44
+match_h2h,Spain v Austria,Spain,1.32,0.7247,44
+match_h2h,Spain v Austria,Draw,5.25,0.1831,44
+match_h2h,Portugal v Croatia,Croatia,5.06,0.19,44
+match_h2h,Portugal v Croatia,Portugal,1.79,0.5366,44
+match_h2h,Portugal v Croatia,Draw,3.51,0.2734,44
+match_h2h,Switzerland v Algeria,Algeria,4.11,0.2336,44
+match_h2h,Switzerland v Algeria,Switzerland,2.03,0.4711,44
+match_h2h,Switzerland v Algeria,Draw,3.25,0.2952,44
+match_h2h,Australia v Egypt,Australia,3.4,0.2819,44
+match_h2h,Australia v Egypt,Egypt,2.49,0.3848,44
+match_h2h,Australia v Egypt,Draw,2.88,0.3333,44
+match_h2h,Argentina v Cape Verde,Argentina,1.16,0.8258,44
+match_h2h,Argentina v Cape Verde,Cape Verde,19.85,0.0494,44
+match_h2h,Argentina v Cape Verde,Draw,7.73,0.1248,44
+match_h2h,Colombia v Ghana,Colombia,1.52,0.6308,44
+match_h2h,Colombia v Ghana,Ghana,7.71,0.125,44
+match_h2h,Colombia v Ghana,Draw,3.92,0.2442,44
+match_h2h,Canada v Morocco,Canada,4.91,0.1954,44
+match_h2h,Canada v Morocco,Morocco,1.81,0.5292,44
+match_h2h,Canada v Morocco,Draw,3.48,0.2753,44
+match_h2h,Paraguay v France,France,1.2,0.8032,43
+match_h2h,Paraguay v France,Paraguay,17.4,0.0566,43
+match_h2h,Paraguay v France,Draw,6.87,0.1402,43
+match_h2h,Brazil v Norway,Brazil,1.9,0.5023,44
+match_h2h,Brazil v Norway,Norway,4.14,0.2313,44
+match_h2h,Brazil v Norway,Draw,3.59,0.2664,44
