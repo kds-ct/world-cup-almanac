@@ -1,57 +1,48 @@
 # odds via the-odds-api.com; decimal odds averaged across EU/UK bookmakers; devig = vig-removed probability
 market,match,team_or_outcome,avg_decimal_odds,devig_probability,n_bookmakers
-winner,,France,2.97,0.3251,5
-winner,,Argentina,5.44,0.1773,5
-winner,,Spain,9.24,0.1044,5
-winner,,England,11.0,0.0889,5
-winner,,Brazil,13.6,0.0713,5
-winner,,Portugal,17.6,0.0549,5
-winner,,Mexico,29.8,0.0324,5
-winner,,Morocco,34.8,0.028,5
+winner,,France,3.0,0.322,5
+winner,,Argentina,5.52,0.1748,5
+winner,,Spain,7.28,0.1325,5
+winner,,England,12.2,0.0794,5
+winner,,Brazil,14.0,0.0689,5
+winner,,Portugal,16.2,0.0602,5
+winner,,Mexico,33.8,0.0286,5
 winner,,Colombia,35.4,0.0274,5
-winner,,USA,35.4,0.0274,5
+winner,,USA,37.0,0.0262,5
+winner,,Morocco,39.6,0.025,5
 winner,,Norway,48.8,0.0202,5
-winner,,Belgium,56.8,0.0177,5
-winner,,Switzerland,116.2,0.0085,5
-winner,,Croatia,284.2,0.0035,5
-winner,,Canada,394.2,0.0027,5
-winner,,Egypt,514.2,0.002,5
-winner,,Australia,566.2,0.0018,5
-winner,,Paraguay,620.2,0.0017,5
-winner,,Austria,628.2,0.0016,5
-winner,,Ghana,678.2,0.0015,5
-winner,,Algeria,828.2,0.0012,5
+winner,,Belgium,74.8,0.0143,5
+winner,,Switzerland,92.2,0.0111,5
+winner,,Canada,436.2,0.0025,5
+winner,,Egypt,638.2,0.0018,5
+winner,,Australia,626.2,0.0016,5
+winner,,Paraguay,714.2,0.0015,5
+winner,,Ghana,748.2,0.0014,5
 winner,,Cape Verde,917.0,0.001,3
-match_h2h,Spain v Austria,Austria,10.79,0.0897,45
-match_h2h,Spain v Austria,Spain,1.39,0.7179,45
-match_h2h,Spain v Austria,Draw,5.24,0.1924,45
-match_h2h,Portugal v Croatia,Croatia,5.17,0.1863,45
-match_h2h,Portugal v Croatia,Portugal,1.73,0.5565,45
-match_h2h,Portugal v Croatia,Draw,3.74,0.2572,45
-match_h2h,Switzerland v Algeria,Algeria,4.2,0.2289,45
-match_h2h,Switzerland v Algeria,Switzerland,2.02,0.476,45
-match_h2h,Switzerland v Algeria,Draw,3.25,0.2951,45
-match_h2h,Australia v Egypt,Australia,3.4,0.2823,45
-match_h2h,Australia v Egypt,Egypt,2.49,0.3854,45
-match_h2h,Australia v Egypt,Draw,2.89,0.3323,45
-match_h2h,Argentina v Cape Verde,Argentina,1.16,0.8286,45
-match_h2h,Argentina v Cape Verde,Cape Verde,20.3,0.0484,45
-match_h2h,Argentina v Cape Verde,Draw,7.87,0.123,45
-match_h2h,Colombia v Ghana,Colombia,1.52,0.6303,45
-match_h2h,Colombia v Ghana,Ghana,7.57,0.1272,45
-match_h2h,Colombia v Ghana,Draw,3.96,0.2425,45
-match_h2h,Canada v Morocco,Canada,5.15,0.1866,45
-match_h2h,Canada v Morocco,Morocco,1.79,0.537,45
-match_h2h,Canada v Morocco,Draw,3.47,0.2764,45
-match_h2h,Paraguay v France,France,1.19,0.8092,44
-match_h2h,Paraguay v France,Paraguay,18.21,0.0543,44
-match_h2h,Paraguay v France,Draw,7.05,0.1365,44
-match_h2h,Brazil v Norway,Brazil,1.89,0.5074,45
-match_h2h,Brazil v Norway,Norway,4.13,0.2322,45
-match_h2h,Brazil v Norway,Draw,3.68,0.2604,45
-match_h2h,Mexico v England,England,2.46,0.3889,44
-match_h2h,Mexico v England,Mexico,3.11,0.308,44
-match_h2h,Mexico v England,Draw,3.16,0.3031,44
-match_h2h,USA v Belgium,Belgium,2.73,0.3506,43
-match_h2h,USA v Belgium,USA,2.57,0.3726,43
-match_h2h,USA v Belgium,Draw,3.46,0.2768,43
+match_h2h,Australia v Egypt,Australia,3.64,0.2639,43
+match_h2h,Australia v Egypt,Egypt,2.38,0.4034,43
+match_h2h,Australia v Egypt,Draw,2.89,0.3327,43
+match_h2h,Argentina v Cape Verde,Argentina,1.14,0.8425,43
+match_h2h,Argentina v Cape Verde,Cape Verde,22.79,0.0439,43
+match_h2h,Argentina v Cape Verde,Draw,8.5,0.1136,43
+match_h2h,Colombia v Ghana,Colombia,1.42,0.6744,43
+match_h2h,Colombia v Ghana,Ghana,9.04,0.1069,43
+match_h2h,Colombia v Ghana,Draw,4.4,0.2187,43
+match_h2h,Canada v Morocco,Canada,5.19,0.1853,43
+match_h2h,Canada v Morocco,Morocco,1.77,0.541,43
+match_h2h,Canada v Morocco,Draw,3.5,0.2737,43
+match_h2h,Paraguay v France,France,1.19,0.8059,43
+match_h2h,Paraguay v France,Paraguay,17.28,0.0571,43
+match_h2h,Paraguay v France,Draw,7.04,0.137,43
+match_h2h,Brazil v Norway,Brazil,1.86,0.5152,43
+match_h2h,Brazil v Norway,Norway,4.25,0.2257,43
+match_h2h,Brazil v Norway,Draw,3.69,0.2591,43
+match_h2h,Mexico v England,England,2.42,0.3961,43
+match_h2h,Mexico v England,Mexico,3.14,0.3049,43
+match_h2h,Mexico v England,Draw,3.2,0.299,43
+match_h2h,Portugal v Spain,Portugal,4.09,0.2344,42
+match_h2h,Portugal v Spain,Spain,1.91,0.5008,42
+match_h2h,Portugal v Spain,Draw,3.62,0.2649,42
+match_h2h,USA v Belgium,Belgium,2.69,0.3558,43
+match_h2h,USA v Belgium,USA,2.66,0.3602,43
+match_h2h,USA v Belgium,Draw,3.37,0.284,43
