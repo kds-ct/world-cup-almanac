@@ -1,48 +1,42 @@
 # odds via the-odds-api.com; decimal odds averaged across EU/UK bookmakers; devig = vig-removed probability
 market,match,team_or_outcome,avg_decimal_odds,devig_probability,n_bookmakers
-winner,,France,3.0,0.322,5
-winner,,Argentina,5.52,0.1748,5
-winner,,Spain,7.28,0.1325,5
-winner,,England,12.2,0.0794,5
-winner,,Brazil,14.0,0.0689,5
-winner,,Portugal,16.2,0.0602,5
-winner,,Mexico,33.8,0.0286,5
-winner,,Colombia,35.4,0.0274,5
-winner,,USA,37.0,0.0262,5
-winner,,Morocco,39.6,0.025,5
-winner,,Norway,48.8,0.0202,5
-winner,,Belgium,74.8,0.0143,5
-winner,,Switzerland,92.2,0.0111,5
-winner,,Canada,436.2,0.0025,5
-winner,,Egypt,638.2,0.0018,5
-winner,,Australia,626.2,0.0016,5
-winner,,Paraguay,714.2,0.0015,5
-winner,,Ghana,748.2,0.0014,5
-winner,,Cape Verde,917.0,0.001,3
-match_h2h,Australia v Egypt,Australia,3.64,0.2639,43
-match_h2h,Australia v Egypt,Egypt,2.38,0.4034,43
-match_h2h,Australia v Egypt,Draw,2.89,0.3327,43
-match_h2h,Argentina v Cape Verde,Argentina,1.14,0.8425,43
-match_h2h,Argentina v Cape Verde,Cape Verde,22.79,0.0439,43
-match_h2h,Argentina v Cape Verde,Draw,8.5,0.1136,43
-match_h2h,Colombia v Ghana,Colombia,1.42,0.6744,43
-match_h2h,Colombia v Ghana,Ghana,9.04,0.1069,43
-match_h2h,Colombia v Ghana,Draw,4.4,0.2187,43
-match_h2h,Canada v Morocco,Canada,5.19,0.1853,43
-match_h2h,Canada v Morocco,Morocco,1.77,0.541,43
-match_h2h,Canada v Morocco,Draw,3.5,0.2737,43
-match_h2h,Paraguay v France,France,1.19,0.8059,43
-match_h2h,Paraguay v France,Paraguay,17.28,0.0571,43
-match_h2h,Paraguay v France,Draw,7.04,0.137,43
-match_h2h,Brazil v Norway,Brazil,1.86,0.5152,43
-match_h2h,Brazil v Norway,Norway,4.25,0.2257,43
-match_h2h,Brazil v Norway,Draw,3.69,0.2591,43
-match_h2h,Mexico v England,England,2.42,0.3961,43
-match_h2h,Mexico v England,Mexico,3.14,0.3049,43
-match_h2h,Mexico v England,Draw,3.2,0.299,43
-match_h2h,Portugal v Spain,Portugal,4.09,0.2344,42
-match_h2h,Portugal v Spain,Spain,1.91,0.5008,42
-match_h2h,Portugal v Spain,Draw,3.62,0.2649,42
-match_h2h,USA v Belgium,Belgium,2.69,0.3558,43
-match_h2h,USA v Belgium,USA,2.66,0.3602,43
-match_h2h,USA v Belgium,Draw,3.37,0.284,43
+winner,,France,3.0,0.3243,5
+winner,,Argentina,5.88,0.1656,5
+winner,,Spain,7.4,0.1313,5
+winner,,England,12.6,0.0776,5
+winner,,Brazil,13.8,0.0705,5
+winner,,Portugal,15.4,0.0635,5
+winner,,Colombia,29.6,0.0329,5
+winner,,Mexico,31.4,0.031,5
+winner,,USA,38.6,0.0254,5
+winner,,Morocco,38.6,0.0254,5
+winner,,Norway,48.8,0.0203,5
+winner,,Belgium,70.2,0.0145,5
+winner,,Switzerland,97.4,0.0102,5
+winner,,Canada,340.2,0.003,5
+winner,,Egypt,422.2,0.0025,5
+winner,,Paraguay,538.2,0.0019,5
+match_h2h,Canada v Morocco,Canada,5.26,0.183,44
+match_h2h,Canada v Morocco,Morocco,1.78,0.5384,44
+match_h2h,Canada v Morocco,Draw,3.45,0.2786,44
+match_h2h,Paraguay v France,France,1.19,0.8107,44
+match_h2h,Paraguay v France,Paraguay,17.77,0.0556,44
+match_h2h,Paraguay v France,Draw,7.22,0.1337,44
+match_h2h,Brazil v Norway,Brazil,1.82,0.5257,44
+match_h2h,Brazil v Norway,Norway,4.41,0.2182,44
+match_h2h,Brazil v Norway,Draw,3.74,0.2561,44
+match_h2h,Mexico v England,England,2.44,0.3931,44
+match_h2h,Mexico v England,Mexico,3.12,0.3071,44
+match_h2h,Mexico v England,Draw,3.2,0.2998,44
+match_h2h,Portugal v Spain,Portugal,4.12,0.2329,44
+match_h2h,Portugal v Spain,Spain,1.9,0.5028,44
+match_h2h,Portugal v Spain,Draw,3.62,0.2642,44
+match_h2h,USA v Belgium,Belgium,2.6,0.3678,44
+match_h2h,USA v Belgium,USA,2.76,0.3462,44
+match_h2h,USA v Belgium,Draw,3.34,0.286,44
+match_h2h,Argentina v Egypt,Argentina,1.36,0.704,43
+match_h2h,Argentina v Egypt,Egypt,9.9,0.0975,43
+match_h2h,Argentina v Egypt,Draw,4.84,0.1984,43
+match_h2h,Switzerland v Colombia,Colombia,2.25,0.4259,41
+match_h2h,Switzerland v Colombia,Switzerland,3.5,0.2736,41
+match_h2h,Switzerland v Colombia,Draw,3.19,0.3005,41
