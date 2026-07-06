@@ -566,10 +566,11 @@ function goalsByMatchday(matches){
   }
   return map;
 }
-const KO_ORDER=["Round of 16","Quarter-finals","Semi-finals","Final"];
+const KO_ORDER=["Round of 32","Round of 16","Quarter-finals","Semi-finals","Final"];
 function normRound(r){
   if(!r) return "—";
   if(/^Matchday\s*\d/i.test(r)) return r;
+  if(/round of 32/i.test(r)) return "Round of 32";       // new in 2026 (48 teams → 32-team knockout)
   if(/round of 16/i.test(r)) return "Round of 16";
   if(/quarter/i.test(r)) return "Quarter-finals";
   if(/semi/i.test(r)) return "Semi-finals";
@@ -686,7 +687,7 @@ function tournamentHTML(d){
   const rkeys=Object.keys(byRound);
   const maxR=Math.max(1,...rkeys.map(k=>byRound[k].goals));
   html+=`<section class="panel col-6 reveal"><div class="phead"><h2>Goals by Stage</h2><span class="meta">total goals per round</span></div><div class="vbars" style="height:170px">`;
-  rkeys.forEach(k=>{ const r=byRound[k]; const sl=k.replace(/Matchday\s*/i,"MD ").replace("Quarter-finals","QF").replace("Semi-finals","SF").replace("Round of 16","R16").replace("Third place","3rd");
+  rkeys.forEach(k=>{ const r=byRound[k]; const sl=k.replace(/Matchday\s*/i,"MD ").replace("Quarter-finals","QF").replace("Semi-finals","SF").replace("Round of 32","R32").replace("Round of 16","R16").replace("Third place","3rd");
     html+=`<div class="vbar"><div class="col" data-h="${(r.goals/maxR*100).toFixed(1)}" title="${escapeHtml(k)}: ${r.goals} goals in ${r.games} games"><span class="cnt">${r.goals}</span></div><div class="lbl">${escapeHtml(sl)}</div></div>`; });
   html+=`</div></section>`;
 
