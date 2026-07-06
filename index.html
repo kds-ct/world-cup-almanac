@@ -708,6 +708,18 @@ function tournamentHTML(d){
 
   /* Knockout bracket */
   if(br.length){
+    // resolve openfootball placeholder slots (e.g. "W89" = winner of match 89) so upcoming ties show
+    // whichever side is already decided, even when the other feeder hasn't been played yet.
+    const byNum={}; for(const mm of d.matches){ if(mm.num!=null) byNum[mm.num]=mm; }
+    const slotTeam=(name,depth=0)=>{
+      if(!name||depth>12) return null;
+      if(!isPlaceholder(name)) return name;
+      const wl=/^([WL])(\d+)$/.exec(name); if(!wl) return null;   // W/L a match number (group slots like "1A" resolve once openfootball fills R32)
+      const src=byNum[+wl[2]]; if(!src) return null;
+      const rr=resolveResult(src); if(!rr||!rr.w) return null;
+      const win=rr.w===1?src.team1:src.team2, lose=rr.w===1?src.team2:src.team1;
+      return slotTeam(wl[1]==="W"?win:lose, depth+1);
+    };
     html+=`<section class="panel col-12 reveal"><div class="phead"><h2>Knockout Bracket</h2><span class="meta">${champ&&champ.team?escapeHtml(champ.team)+" champions":"to be decided"}</span></div><div class="bracket">`;
     for(const col of br){
       html+=`<div class="round"><div class="rh">${escapeHtml(col.round)}</div>`;
@@ -716,9 +728,10 @@ function tournamentHTML(d){
         const w1=r&&r.w===1, w2=r&&r.w===2;
         const isF=col.round==="Final";
         const annot = r&&r.by==="pens" ? `${r.pa}–${r.pb} pens` : r&&r.by==="aet" ? "a.e.t." : "";
+        const t1=slotTeam(m.team1), t2=slotTeam(m.team2);
         html+=`<div class="tie ${isF?'final':''}">
-          <div class="t ${w1?'w':sc?'l':''}">${flag(isPlaceholder(m.team1)?"?":m.team1,"flag sm")}<span class="nm" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(isPlaceholder(m.team1)?"TBD":m.team1)}</span><span class="s">${sc?r.a:""}</span></div>
-          <div class="t ${w2?'w':sc?'l':''}">${flag(isPlaceholder(m.team2)?"?":m.team2,"flag sm")}<span class="nm" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(isPlaceholder(m.team2)?"TBD":m.team2)}</span><span class="s">${sc?r.b:""}</span></div>
+          <div class="t ${w1?'w':sc?'l':''}">${flag(t1||"?","flag sm")}<span class="nm" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t1||"TBD")}</span><span class="s">${sc?r.a:""}</span></div>
+          <div class="t ${w2?'w':sc?'l':''}">${flag(t2||"?","flag sm")}<span class="nm" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(t2||"TBD")}</span><span class="s">${sc?r.b:""}</span></div>
           ${annot?`<div style="font-size:10px;letter-spacing:.04em;color:var(--muted2);text-align:right;margin-top:2px">${annot}</div>`:""}
         </div>`;
       }
