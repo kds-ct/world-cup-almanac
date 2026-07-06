@@ -485,6 +485,15 @@ reach = {n: defaultdict(int) for n in QUALIFIED}   # stage -> count
 win_group = defaultdict(int)
 STAGES = ["knockout","r16","quarter","semi","final","title"]
 
+# Once the Round-of-32 bracket is set (real teams placed), pin those exact pairings instead of re-deriving
+# them from a random third-place assignment each run — otherwise played KO results never match the simulated
+# matchup, so they can't lock and eliminated teams keep "advancing". (Mirrors the JS recomputeForecast fix.)
+r32_actual, ko_teams = {}, set()
+for m in LIVE["matches"]:
+    if m.get("round") == "Round of 32" and not _is_ph(m["team1"]) and not _is_ph(m["team2"]):
+        r32_actual[m["num"]] = (m["team1"], m["team2"]); ko_teams.add(m["team1"]); ko_teams.add(m["team2"])
+bracket_set = len(r32_actual) == 16
+
 for _ in range(N):
     pos = {}   # (place, group) -> team ; place in {1,2}
     thirds = []  # (pts, gd, gf, team, group)
@@ -509,16 +518,23 @@ for _ in range(N):
     # top-8 thirds
     thirds.sort(key=lambda x:(x[0],x[1],x[2],random.random()), reverse=True)
     q = thirds[:8]
-    for _,_,_,t,_g in q: reach[t]["knockout"] += 1          # 8 best thirds
-    for team in pos.values(): reach[team]["knockout"] += 1   # 24 group top-2
     third_assign = assign_thirds([x[4] for x in q], THIRD_SLOTS)
     third_team = {x[4]: x[3] for x in q}
+    if bracket_set:
+        for t in ko_teams:
+            if t in reach: reach[t]["knockout"] += 1
+    else:
+        for _,_,_,t,_g in q: reach[t]["knockout"] += 1          # 8 best thirds
+        for team in pos.values(): reach[team]["knockout"] += 1   # 24 group top-2
 
     winners = {}
     for mnum in range(73, 89):           # Round of 32
-        a, b = R32[mnum]
-        ta = pos[a] if a[0] in ("1","2") else third_team[third_assign[mnum]]
-        tb = pos[b] if b[0] in ("1","2") else third_team[third_assign[mnum]]
+        if bracket_set:
+            ta, tb = r32_actual[mnum]
+        else:
+            a, b = R32[mnum]
+            ta = pos[a] if a[0] in ("1","2") else third_team[third_assign[mnum]]
+            tb = pos[b] if b[0] in ("1","2") else third_team[third_assign[mnum]]
         if mnum in koWin and {ta, tb} == {koWin[mnum][1], koWin[mnum][2]}: w = koWin[mnum][0]
         else: w = ko_winner(ta, tb, rat(ta), rat(tb))
         winners[mnum] = w

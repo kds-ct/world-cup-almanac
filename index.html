@@ -1160,6 +1160,13 @@ async function recomputeForecast(N, onProgress, override){
     if(!["Round of 32","Round of 16","Quarter-final","Semi-final","Final"].includes(r))continue;
     const a=m.team1,b=m.team2; if(isPh(a)||isPh(b))continue; const w=koOf(m); if(!w)continue;
     if(r==="Final")finalWin=[w,a,b]; else koWin[m.num]=[w,a,b]; }
+  // Once the Round-of-32 bracket is actually set (real teams placed), pin those exact pairings instead of
+  // re-deriving them from a random third-place assignment each run — otherwise played KO results never match
+  // the simulated matchup, so they can't lock and eliminated teams keep "advancing".
+  const r32Actual={}, koTeamsSet=new Set();
+  for(const m of LIVE.matches){ if(m.round==="Round of 32" && !isPh(m.team1) && !isPh(m.team2)){
+    r32Actual[m.num]=[m.team1,m.team2]; koTeamsSet.add(m.team1); koTeamsSet.add(m.team2); } }
+  const bracketSet = Object.keys(r32Actual).length===16;
   // estimated card suspensions -> a banned player weakens their team's NEXT (remaining group) game,
   // weighted by how many goals they've scored (a proxy for how key they are).
   const susp={};
@@ -1187,11 +1194,14 @@ async function recomputeForecast(N, onProgress, override){
       pos["1"+g]=rank[0]; pos["2"+g]=rank[1]; winGroup[rank[0]]++;
       const t3=rank[2]; thirds.push([tab[t3][0],tab[t3][1],tab[t3][2],t3,g]); }
     thirds.sort((x,y)=>y[0]-x[0]||y[1]-x[1]||y[2]-x[2]||Math.random()-0.5);
-    const q=thirds.slice(0,8); q.forEach(x=>reach[x[3]].knockout++); Object.values(pos).forEach(t=>reach[t].knockout++);
+    const q=thirds.slice(0,8);
     const ta3=assignThirds(q.map(x=>x[4])), thirdTeam={}; q.forEach(x=>thirdTeam[x[4]]=x[3]);
+    if(bracketSet) koTeamsSet.forEach(t=>{ if(reach[t]) reach[t].knockout++; });
+    else { q.forEach(x=>reach[x[3]].knockout++); Object.values(pos).forEach(t=>reach[t].knockout++); }
     const winners={};
-    for(let m=73;m<=88;m++){ const sa=R32T[m][0],sb=R32T[m][1];
-      const ta=sa[0]==="3"?thirdTeam[ta3[m]]:pos[sa[0]+sa[1]], tb=sb[0]==="3"?thirdTeam[ta3[m]]:pos[sb[0]+sb[1]];
+    for(let m=73;m<=88;m++){ let ta,tb;
+      if(bracketSet){ ta=r32Actual[m][0]; tb=r32Actual[m][1]; }
+      else { const sa=R32T[m][0],sb=R32T[m][1]; ta=sa[0]==="3"?thirdTeam[ta3[m]]:pos[sa[0]+sa[1]]; tb=sb[0]==="3"?thirdTeam[ta3[m]]:pos[sb[0]+sb[1]]; }
       const w=lock(m,ta,tb)||koW(ta,tb); winners[m]=w; reach[w].r16++; }
     for(let m=89;m<=102;m++){ const ta=winners[LATERT[m][0]], tb=winners[LATERT[m][1]];
       const w=lock(m,ta,tb)||koW(ta,tb); winners[m]=w;
@@ -1226,6 +1236,7 @@ function wireForecastRefresh(){
       WC2026.playedAll=res.playedAll; WC2026.totalAll=res.totalAll; WC2026.teams=res.teams;
       FORECAST_LIVE=true;   // the on-screen + exported forecast now reflect live results, not the build snapshot
       document.getElementById("liveTag").textContent="Live · "+WC2026.asOf;
+      if(state.view!=="forecast") return;   // user navigated away mid-simulation — don't clobber their view
       app.innerHTML=forecastHTML(); animateIn(); wireForecastRefresh(); wireEloRange();
       const s2=document.getElementById("fcRefreshStatus");
       if(s2) s2.innerHTML=`<span style="color:var(--grass)">✓ Updated from live results</span> — ${res.played}/${res.total} group games played, as of ${res.asOf}.`;
@@ -1406,6 +1417,7 @@ function wireMaths(){
 /* ============================== ORCHESTRATION ============================== */
 const app=document.getElementById("app");
 const state={view:"tournament",year:2026};
+let _fcAutoRan=false;   // ensures the one-time auto-refresh of the forecast on its first open
 let curMatches=[];
 
 function animateIn(){
@@ -1452,6 +1464,8 @@ async function render(){
       document.getElementById("hSub").innerHTML=`A <b>live</b> model for <b>USA · Canada · Mexico 2026</b>, updated through <b>${WC2026.asOf}</b> (${WC2026.played}/${WC2026.total} group games in) — it locks in the results so far and simulates the rest ${WC2026.sims.toLocaleString()} times to give title odds, each team's road to the final and who escapes every group.`;
       app.innerHTML=forecastHTML();
       wireForecastRefresh(); wireEloRange();
+      if(!_fcAutoRan){ _fcAutoRan=true;   // first time the Forecast opens, refresh from live results so it never sits on a stale build
+        setTimeout(()=>{ const b=document.getElementById("fcRefresh"); if(b && !b.disabled && state.view==="forecast") b.click(); }, 250); }
     }
     animateIn();
   }catch(e){ showError(e); }
