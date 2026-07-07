@@ -1017,7 +1017,8 @@ function forecastHTML(){
   if(WC2026.matchForecasts && WC2026.matchForecasts.length){
     const mpct=x=> x>=0.995?">99%" : x<0.005?"<1%" : Math.round(x*100)+"%";
     const dfmt=d=>{ if(!d) return ""; try{ return new Date(d+"T12:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric"}); }catch(e){ return d; } };
-    html+=`<section class="panel col-12 reveal"><div class="phead"><h2>Match Forecasts</h2><span class="meta">${WC2026.matchForecasts.length} remaining · chance to win / advance</span></div>
+    const pend=WC2026.pendingMatches||0;
+    html+=`<section class="panel col-12 reveal"><div class="phead"><h2>Match Forecasts</h2><span class="meta">next ${WC2026.matchForecasts.length} · teams set${pend?` · ${pend} to come`:``}</span></div>
       <div class="groups" style="grid-template-columns:repeat(auto-fill,minmax(310px,1fr))">`;
     for(const f of WC2026.matchForecasts){
       const rlab = f.ko ? (f.round==="Match for third place"?"Third place":f.round) : (f.grp||"Group stage");
@@ -1030,17 +1031,17 @@ function forecastHTML(){
           ${teamRow(f.a, mpct(f.advA), f.advA>=f.advB)}
           <div class="track" style="height:7px;margin:6px 0;display:flex;overflow:hidden;background:transparent"><div style="width:${(f.advA*100).toFixed(1)}%;background:var(--gold)"></div><div style="flex:1;background:var(--line2)"></div></div>
           ${teamRow(f.b, mpct(f.advB), f.advB>f.advA)}
-          <div style="font-size:10.5px;color:var(--muted2);margin-top:8px">${f.live?`now <b style="color:var(--ink)">${f.ca}–${f.cb}</b> · `:``}likely finish <b style="color:var(--muted)">${f.mi}–${f.mj}</b> · ${outcomeWord}</div>
+          <div style="font-size:10.5px;color:var(--muted2);margin-top:8px">${f.live?`now <b style="color:var(--ink)">${f.ca}–${f.cb}</b> · `:``}proj. goals <b style="color:var(--muted)">${f.xa}–${f.xb}</b> · ${outcomeWord}</div>
         </div>`;
       } else {
         html+=`<div style="border:1px solid var(--line);border-radius:10px;padding:11px 13px">${head}
           <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${flag(f.a,"flag sm")} ${escapeHtml(f.a)}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right">${escapeHtml(f.b)} ${flag(f.b,"flag sm")}</span></div>
           <div class="track" style="height:7px;margin:5px 0;display:flex;overflow:hidden;background:transparent"><div style="width:${(f.pw*100).toFixed(1)}%;background:var(--gold)"></div><div style="width:${(f.pd*100).toFixed(1)}%;background:var(--muted2)"></div><div style="flex:1;background:var(--blue)"></div></div>
-          <div style="font-size:10.5px;color:var(--muted2);margin-top:7px">${f.live?`now <b style="color:var(--ink)">${f.ca}–${f.cb}</b> · `:``}<b style="color:var(--gold)">W ${mpct(f.pw)}</b> · draw ${mpct(f.pd)} · <b style="color:var(--blue)">W ${mpct(f.pl)}</b> · likely ${f.mi}–${f.mj}</div>
+          <div style="font-size:10.5px;color:var(--muted2);margin-top:7px">${f.live?`now <b style="color:var(--ink)">${f.ca}–${f.cb}</b> · `:``}<b style="color:var(--gold)">W ${mpct(f.pw)}</b> · draw ${mpct(f.pd)} · <b style="color:var(--blue)">W ${mpct(f.pl)}</b> · proj. ${f.xa}–${f.xb}</div>
         </div>`;
       }
     }
-    html+=`</div></section>`;
+    html+=`</div>${pend?`<p class="note" style="margin-top:12px">Another <b>${pend}</b> fixture${pend>1?"s":""} (later rounds) will appear here as their teams are decided. “Proj. goals” is each side’s expected goals — the single most-likely scoreline in a tight knockout is almost always 1–0, so this is the more telling number.</p>`:``}</section>`;
   }
 
   /* Road to the final — nested survival funnel */
@@ -1314,24 +1315,25 @@ async function recomputeForecast(N, onProgress, override){
     for(let i=0;i<=9;i++)for(let j=0;j<=9;j++){ const p=poisPmf(la,i)*poisPmf(lb,j), fa=ca+i, fb=cb+j;
       if(fa>fb)pa+=p; else if(fa===fb)pd+=p; else pb+=p; if(p>mx){mx=p;mi=fa;mj=fb;} }
     const s=pa+pd+pb||1; return {pa:pa/s, pd:pd/s, pb:pb/s, mi, mj}; };   // renormalize the truncated tail so W/D/L sum to 1
-  const matchForecasts=[];
+  const matchForecasts=[]; let pendingMatches=0;
   for(const m of LIVE.matches){
     const isKO=KO_ROUNDS.includes(m.round), isGrp=String(m.group||"").startsWith("Group");
     if((!isKO && !isGrp) || (isPlayed(m) && !m._inplay)) continue;   // only remaining or in-progress games
     const a=resolveSlot(m.team1), b=resolveSlot(m.team2);
-    if(!a || !b || !(a in liveElo) || !(b in liveElo)) continue;     // both sides must be known
+    if(!a || !b || !(a in liveElo) || !(b in liveElo)){ pendingMatches++; continue; }   // a later fixture whose teams aren't decided yet
     const drKO=(RAT(a)+(HOSTS.has(a)?HOST_BUMP:0))-(RAT(b)+(HOSTS.has(b)?HOST_BUMP:0)), pet=eExp(drKO);   // Elo advance prob (matches koW/koResolve)
     const la=lam(a,b), lb=lam(b,a);
     const ip=m._inplay, f=ip?Math.max(0.05,(90-ip.min)/90):1, ca=ip?ip.ca:0, cb=ip?ip.cb:0;
     const g=grid(la*f, lb*f, ca, cb);
-    const fc={num:m.num, round:m.round, grp:isGrp?String(m.group||""):"", date:m.date||"", a, b, ko:isKO, la:Math.round(la*10)/10, lb:Math.round(lb*10)/10,
+    const fc={num:m.num, round:m.round, grp:isGrp?String(m.group||""):"", date:m.date||"", a, b, ko:isKO,
+      xa:Math.round((ca+la*f)*10)/10, xb:Math.round((cb+lb*f)*10)/10,   // expected total goals each side (differentiates matches; modal score is almost always 1-0)
       mi:g.mi, mj:g.mj, live:!!ip, ca, cb, min:ip?ip.min:0};
     if(isKO){ fc.advA = ip ? (g.pa + g.pd*pet) : pet; fc.advB = 1 - fc.advA; }   // live: play out the rest (level -> ET/pens); not started: the Elo win prob the sim uses
     else { fc.pw=g.pa; fc.pd=g.pd; fc.pl=g.pb; }
     matchForecasts.push(fc);
   }
   matchForecasts.sort((x,y)=> (y.live?1:0)-(x.live?1:0) || (x.date||"").localeCompare(y.date||"") || (x.num||0)-(y.num||0));
-  return {sims:N, asOf, played:playedG.length, total:grp.length, playedAll, totalAll, teams, avgQ, inPlay:inPlayN, matchForecasts};
+  return {sims:N, asOf, played:playedG.length, total:grp.length, playedAll, totalAll, teams, avgQ, inPlay:inPlayN, matchForecasts, pendingMatches};
 }
 function wireForecastRefresh(){
   const btn=document.getElementById("fcRefresh"); if(!btn) return;
@@ -1341,7 +1343,7 @@ function wireForecastRefresh(){
     try{
       const res=await recomputeForecast(30000, p=>{ status.textContent="Running 30,000 simulations… "+Math.round(p*100)+"%"; }, ELO_OVERRIDE);
       WC2026.sims=res.sims; WC2026.asOf=res.asOf; WC2026.played=res.played; WC2026.total=res.total;
-      WC2026.playedAll=res.playedAll; WC2026.totalAll=res.totalAll; WC2026.teams=res.teams; WC2026.matchForecasts=res.matchForecasts;
+      WC2026.playedAll=res.playedAll; WC2026.totalAll=res.totalAll; WC2026.teams=res.teams; WC2026.matchForecasts=res.matchForecasts; WC2026.pendingMatches=res.pendingMatches;
       FORECAST_LIVE=true;   // the on-screen + exported forecast now reflect live results, not the build snapshot
       document.getElementById("liveTag").textContent="Live · "+WC2026.asOf;
       if(state.view!=="forecast") return;   // user navigated away mid-simulation — don't clobber their view
@@ -1369,7 +1371,7 @@ function wireEloRange(){
       ELO_YEAR=y||ELO_MIN_YEAR; ELO_OVERRIDE=override;
       const res=await recomputeForecast(20000, p=>{ status.textContent=(y?`Recomputing Elo since ${y} & simulating… `:"Re-simulating… ")+Math.round(p*100)+"%"; }, override);
       WC2026.sims=res.sims; WC2026.asOf=res.asOf; WC2026.played=res.played; WC2026.total=res.total;
-      WC2026.playedAll=res.playedAll; WC2026.totalAll=res.totalAll; WC2026.teams=res.teams; WC2026.matchForecasts=res.matchForecasts;
+      WC2026.playedAll=res.playedAll; WC2026.totalAll=res.totalAll; WC2026.teams=res.teams; WC2026.matchForecasts=res.matchForecasts; WC2026.pendingMatches=res.pendingMatches;
       FORECAST_LIVE=true;
       document.getElementById("liveTag").textContent="Live · "+WC2026.asOf;
       app.innerHTML=forecastHTML(); animateIn(); wireForecastRefresh(); wireEloRange();
