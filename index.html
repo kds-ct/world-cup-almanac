@@ -914,6 +914,10 @@ const confColor = s => s>=75?"var(--grass)":s>=55?"#c2a73f":"var(--red)";
 function forecastHTML(){
   const T=WC2026.teams;
   const byTitle=T.slice().sort((a,b)=>b.ti-a.ti);
+  // a team is still in it if it can win (ti>0) or any "reach round" outcome is still uncertain (0<p<1).
+  // an eliminated side has every reach prob pinned at 0/1 with ti=0; a side merely losing live still has an uncertain round.
+  const alive = t => (t.ti>0) || [t.ko,t.r16,t.qf,t.sf,t.fn].some(p=>p!=null && p>0 && p<1);
+  const liveTeams = byTitle.filter(alive);
   const fav=byTitle[0], chal=byTitle[1];
   const hosts=T.filter(t=>t.h).sort((a,b)=>b.ti-a.ti);
   const COL={UEFA:"#5aa9e6",CONMEBOL:"#f4c84a",CONCACAF:"#37d07a",CAF:"#e8553c",AFC:"#b07be0",OFC:"#e6a45a"};
@@ -977,9 +981,11 @@ function forecastHTML(){
   </section>`;
 
   /* Title odds */
-  const top=byTitle.slice(0,18), maxT=top[0].ti;
+  const top=(liveTeams.length?liveTeams:byTitle).slice(0,18), maxT=top[0].ti;
+  const someOut = liveTeams.length<byTitle.length;
   const showMkt = !!WC2026.mb;
-  html+=`<section class="panel col-7 reveal"><div class="phead"><h2>Title Odds</h2><span class="meta">${showMkt?`our model · <span style="color:var(--blue)">▏</span> betting market`:`P(win the World Cup)`}</span></div><div class="bars">`;
+  const oddsMeta = someOut ? `${liveTeams.length} still in${showMkt?` · <span style="color:var(--blue)">▏</span> market`:``}` : (showMkt?`our model · <span style="color:var(--blue)">▏</span> betting market`:`P(win the World Cup)`);
+  html+=`<section class="panel col-7 reveal"><div class="phead"><h2>Title Odds</h2><span class="meta">${oddsMeta}</span></div><div class="bars">`;
   top.forEach(t=>{ const c=fcConf(t.ti,WC2026.sims);
     const tick = (showMkt && t.mt>0) ? `<div style="position:absolute;top:0;bottom:0;left:${Math.min(100,t.mt/maxT*100).toFixed(1)}%;width:2px;background:var(--blue);z-index:2" title="market ${fpct(t.mt)}"></div>` : ``;
     html+=`<div class="bar gold" title="${escapeHtml(t.t)} — model ${fpct(t.ti)} ±${(ci95(t.ti,WC2026.sims)*100).toFixed(1)} pts (95% Monte-Carlo)${showMkt&&t.mt>0?` · market ${fpct(t.mt)}`:``} · confidence ${c}/100 (${confBand(c)})"><div class="who">${flag(t.t,"flag sm")}<span class="nm">${escapeHtml(t.t)}</span></div><div class="track" style="position:relative"><div class="fill" data-w="${(t.ti/maxT*100).toFixed(1)}"></div>${tick}</div><div class="num" style="min-width:42px">${fpct(t.ti)}${showMkt&&t.mt>0?`<span style="display:block;font-size:9px;color:var(--blue);font-family:'Archivo';font-weight:600">mkt ${fpct(t.mt)}</span>`:``}</div></div>`; });
@@ -1008,7 +1014,7 @@ function forecastHTML(){
   </section>`;
 
   /* Road to the final — nested survival funnel */
-  const funnel=byTitle.slice(0,12);
+  const funnel=(liveTeams.length?liveTeams:byTitle).slice(0,12);
   html+=`<section class="panel col-12 reveal"><div class="phead"><h2>Road to the Final</h2><span class="meta">survival probability by round</span></div>
     <div style="display:flex;gap:16px;flex-wrap:wrap;font-size:10px;color:var(--muted);margin-bottom:14px">${["Reach last 32","Quarter-final","Semi-final","Final","Champion"].map((l,i)=>`<span style="display:flex;align-items:center;gap:6px"><span style="width:11px;height:11px;border-radius:3px;background:${shades[i]}"></span>${l}</span>`).join("")}</div>
     <div style="display:flex;flex-direction:column;gap:7px">`;
