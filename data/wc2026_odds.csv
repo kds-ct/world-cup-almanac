@@ -1,32 +1,27 @@
 # odds via the-odds-api.com; decimal odds averaged across EU/UK bookmakers; devig = vig-removed probability
 market,match,team_or_outcome,avg_decimal_odds,devig_probability,n_bookmakers
-winner,,France,2.96,0.3301,5
-winner,,Argentina,5.86,0.1663,5
-winner,,England,6.66,0.1464,5
-winner,,Spain,7.24,0.1347,5
-winner,,Portugal,17.4,0.0572,5
-winner,,Norway,20.6,0.0475,5
-winner,,Colombia,28.0,0.0348,5
-winner,,USA,34.8,0.028,5
-winner,,Morocco,37.0,0.0265,5
-winner,,Belgium,70.2,0.0146,5
-winner,,Switzerland,89.4,0.011,5
-winner,,Egypt,384.2,0.0027,5
-match_h2h,Portugal v Spain,Portugal,4.12,0.2335,44
-match_h2h,Portugal v Spain,Spain,1.92,0.5008,44
-match_h2h,Portugal v Spain,Draw,3.62,0.2657,44
-match_h2h,USA v Belgium,Belgium,2.81,0.3405,44
-match_h2h,USA v Belgium,USA,2.52,0.3803,44
-match_h2h,USA v Belgium,Draw,3.43,0.2791,44
-match_h2h,Argentina v Egypt,Argentina,1.37,0.6983,44
-match_h2h,Argentina v Egypt,Egypt,9.6,0.1008,44
-match_h2h,Argentina v Egypt,Draw,4.78,0.2009,44
-match_h2h,Switzerland v Colombia,Colombia,2.31,0.4161,44
-match_h2h,Switzerland v Colombia,Switzerland,3.52,0.2726,44
-match_h2h,Switzerland v Colombia,Draw,3.08,0.3113,44
-match_h2h,France v Morocco,France,1.58,0.6064,44
-match_h2h,France v Morocco,Morocco,6.4,0.1502,44
-match_h2h,France v Morocco,Draw,3.93,0.2434,44
-match_h2h,Norway v England,England,1.91,0.5003,44
-match_h2h,Norway v England,Norway,4.05,0.2366,44
-match_h2h,Norway v England,Draw,3.64,0.263,44
+winner,,France,2.97,0.3291,5
+winner,,Spain,5.02,0.1948,5
+winner,,Argentina,5.7,0.1714,5
+winner,,England,6.56,0.149,5
+winner,,Norway,18.2,0.0537,5
+winner,,Colombia,27.2,0.0359,5
+winner,,Morocco,35.4,0.0278,5
+winner,,Belgium,41.2,0.0238,5
+winner,,Switzerland,87.4,0.0113,5
+winner,,Egypt,336.2,0.0031,5
+match_h2h,Argentina v Egypt,Argentina,1.34,0.7167,44
+match_h2h,Argentina v Egypt,Egypt,11.08,0.0873,44
+match_h2h,Argentina v Egypt,Draw,4.91,0.196,44
+match_h2h,Switzerland v Colombia,Colombia,2.27,0.4242,44
+match_h2h,Switzerland v Colombia,Switzerland,3.62,0.2658,44
+match_h2h,Switzerland v Colombia,Draw,3.1,0.31,44
+match_h2h,France v Morocco,France,1.59,0.6026,44
+match_h2h,France v Morocco,Morocco,6.24,0.1539,44
+match_h2h,France v Morocco,Draw,3.93,0.2435,44
+match_h2h,Spain v Belgium,Belgium,5.61,0.171,44
+match_h2h,Spain v Belgium,Spain,1.63,0.5865,44
+match_h2h,Spain v Belgium,Draw,3.95,0.2425,44
+match_h2h,Norway v England,England,1.88,0.5076,44
+match_h2h,Norway v England,Norway,4.11,0.2333,44
+match_h2h,Norway v England,Draw,3.69,0.2591,44
