@@ -1013,6 +1013,36 @@ function forecastHTML(){
     <p class="note" style="margin-top:12px">The <b style="color:var(--ink)">official FIFA / Coca-Cola World Ranking</b> points, ${hasFifa?'':'<i>not yet embedded — showing Elo only.</i> '}frozen for the tournament (last update 11 Jun 2026, next 20 Jul). FIFA computes these with the <i>Elo method</i>, so we blend them <b>${Math.round(FIFA_W*100)}%</b> into every forecast number above, alongside our own <b style="color:var(--ink)">World-Football Elo</b> (shown small, with its ▲▼ change during the tournament). The big number is FIFA's; <b>#</b> is the world rank, and the bold figure is the team's rank among the 48 here. Where the two disagree — a side we rate high but FIFA rates lower — the blend splits the difference, which keeps the model honest.</p>
   </section>`;
 
+  /* Match forecasts — every remaining / in-progress fixture */
+  if(WC2026.matchForecasts && WC2026.matchForecasts.length){
+    const mpct=x=> x>=0.995?">99%" : x<0.005?"<1%" : Math.round(x*100)+"%";
+    const dfmt=d=>{ if(!d) return ""; try{ return new Date(d+"T12:00:00").toLocaleDateString(undefined,{month:"short",day:"numeric"}); }catch(e){ return d; } };
+    html+=`<section class="panel col-12 reveal"><div class="phead"><h2>Match Forecasts</h2><span class="meta">${WC2026.matchForecasts.length} remaining · chance to win / advance</span></div>
+      <div class="groups" style="grid-template-columns:repeat(auto-fill,minmax(310px,1fr))">`;
+    for(const f of WC2026.matchForecasts){
+      const rlab = f.ko ? (f.round==="Match for third place"?"Third place":f.round) : (f.grp||"Group stage");
+      const live = f.live ? `<span style="color:var(--red);font-weight:700;white-space:nowrap">● LIVE ${f.min}'</span>` : "";
+      const head = `<div style="font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin-bottom:9px;display:flex;justify-content:space-between;gap:8px"><span>${escapeHtml(rlab)}${f.date?` · ${dfmt(f.date)}`:``}</span>${live}</div>`;
+      const teamRow=(name,p,lead)=>`<div style="display:grid;grid-template-columns:1fr auto;align-items:center;gap:6px;font-size:13px"><span style="display:flex;align-items:center;gap:7px;overflow:hidden"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:${lead?700:500};color:${lead?'var(--ink)':'var(--muted)'}">${flag(name,"flag sm")} ${escapeHtml(name)}</span></span><span style="font-family:'Bebas Neue';font-size:17px;color:${lead?'var(--gold)':'var(--muted)'}">${p}</span></div>`;
+      if(f.ko){
+        const outcomeWord = f.round==="Match for third place" ? "to win 3rd" : "to advance";
+        html+=`<div style="border:1px solid var(--line);border-radius:10px;padding:11px 13px">${head}
+          ${teamRow(f.a, mpct(f.advA), f.advA>=f.advB)}
+          <div class="track" style="height:7px;margin:6px 0;display:flex;overflow:hidden;background:transparent"><div style="width:${(f.advA*100).toFixed(1)}%;background:var(--gold)"></div><div style="flex:1;background:var(--line2)"></div></div>
+          ${teamRow(f.b, mpct(f.advB), f.advB>f.advA)}
+          <div style="font-size:10.5px;color:var(--muted2);margin-top:8px">${f.live?`now <b style="color:var(--ink)">${f.ca}–${f.cb}</b> · `:``}likely finish <b style="color:var(--muted)">${f.mi}–${f.mj}</b> · ${outcomeWord}</div>
+        </div>`;
+      } else {
+        html+=`<div style="border:1px solid var(--line);border-radius:10px;padding:11px 13px">${head}
+          <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px"><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${flag(f.a,"flag sm")} ${escapeHtml(f.a)}</span><span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:right">${escapeHtml(f.b)} ${flag(f.b,"flag sm")}</span></div>
+          <div class="track" style="height:7px;margin:5px 0;display:flex;overflow:hidden;background:transparent"><div style="width:${(f.pw*100).toFixed(1)}%;background:var(--gold)"></div><div style="width:${(f.pd*100).toFixed(1)}%;background:var(--muted2)"></div><div style="flex:1;background:var(--blue)"></div></div>
+          <div style="font-size:10.5px;color:var(--muted2);margin-top:7px">${f.live?`now <b style="color:var(--ink)">${f.ca}–${f.cb}</b> · `:``}<b style="color:var(--gold)">W ${mpct(f.pw)}</b> · draw ${mpct(f.pd)} · <b style="color:var(--blue)">W ${mpct(f.pl)}</b> · likely ${f.mi}–${f.mj}</div>
+        </div>`;
+      }
+    }
+    html+=`</div></section>`;
+  }
+
   /* Road to the final — nested survival funnel */
   const funnel=(liveTeams.length?liveTeams:byTitle).slice(0,12);
   html+=`<section class="panel col-12 reveal"><div class="phead"><h2>Road to the Final</h2><span class="meta">survival probability by round</span></div>
@@ -1273,7 +1303,35 @@ async function recomputeForecast(N, onProgress, override){
   })).sort((a,b)=>b.ti-a.ti);
   const avgQ=TEAMS.reduce((s,t)=>s+reach[t.name].knockout,0)/N;
   const playedAll=LIVE.matches.filter(isPlayed).length, totalAll=LIVE.matches.length;
-  return {sims:N, asOf, played:playedG.length, total:grp.length, playedAll, totalAll, teams, avgQ, inPlay:inPlayN};
+  // ---- per-match forecast for every remaining / in-progress fixture (consistent with the sim above) ----
+  const byNumM={}; for(const mm of LIVE.matches) if(mm.num!=null) byNumM[mm.num]=mm;
+  const resolveSlot=(name,depth=0)=>{ if(!name||depth>12) return null; if(!isPh(name)) return name;   // W89/L89 -> the actual team, recursively
+    const wl=/^([WL])(\d+)$/.exec(name); if(!wl) return null; const src=byNumM[+wl[2]]; if(!src) return null;
+    const win=koOf(src); if(!win) return null; const lose=src.team1===win?src.team2:src.team1;
+    return resolveSlot(wl[1]==="W"?win:lose, depth+1); };
+  const KO_ROUNDS=["Round of 32","Round of 16","Quarter-final","Semi-final","Match for third place","Final"];
+  const grid=(la,lb,ca,cb)=>{ let pa=0,pd=0,pb=0,mi=ca,mj=cb,mx=-1;   // final-score distribution from current (ca,cb) + Poisson(la,lb) remainder
+    for(let i=0;i<=9;i++)for(let j=0;j<=9;j++){ const p=poisPmf(la,i)*poisPmf(lb,j), fa=ca+i, fb=cb+j;
+      if(fa>fb)pa+=p; else if(fa===fb)pd+=p; else pb+=p; if(p>mx){mx=p;mi=fa;mj=fb;} }
+    const s=pa+pd+pb||1; return {pa:pa/s, pd:pd/s, pb:pb/s, mi, mj}; };   // renormalize the truncated tail so W/D/L sum to 1
+  const matchForecasts=[];
+  for(const m of LIVE.matches){
+    const isKO=KO_ROUNDS.includes(m.round), isGrp=String(m.group||"").startsWith("Group");
+    if((!isKO && !isGrp) || (isPlayed(m) && !m._inplay)) continue;   // only remaining or in-progress games
+    const a=resolveSlot(m.team1), b=resolveSlot(m.team2);
+    if(!a || !b || !(a in liveElo) || !(b in liveElo)) continue;     // both sides must be known
+    const drKO=(RAT(a)+(HOSTS.has(a)?HOST_BUMP:0))-(RAT(b)+(HOSTS.has(b)?HOST_BUMP:0)), pet=eExp(drKO);   // Elo advance prob (matches koW/koResolve)
+    const la=lam(a,b), lb=lam(b,a);
+    const ip=m._inplay, f=ip?Math.max(0.05,(90-ip.min)/90):1, ca=ip?ip.ca:0, cb=ip?ip.cb:0;
+    const g=grid(la*f, lb*f, ca, cb);
+    const fc={num:m.num, round:m.round, grp:isGrp?String(m.group||""):"", date:m.date||"", a, b, ko:isKO, la:Math.round(la*10)/10, lb:Math.round(lb*10)/10,
+      mi:g.mi, mj:g.mj, live:!!ip, ca, cb, min:ip?ip.min:0};
+    if(isKO){ fc.advA = ip ? (g.pa + g.pd*pet) : pet; fc.advB = 1 - fc.advA; }   // live: play out the rest (level -> ET/pens); not started: the Elo win prob the sim uses
+    else { fc.pw=g.pa; fc.pd=g.pd; fc.pl=g.pb; }
+    matchForecasts.push(fc);
+  }
+  matchForecasts.sort((x,y)=> (y.live?1:0)-(x.live?1:0) || (x.date||"").localeCompare(y.date||"") || (x.num||0)-(y.num||0));
+  return {sims:N, asOf, played:playedG.length, total:grp.length, playedAll, totalAll, teams, avgQ, inPlay:inPlayN, matchForecasts};
 }
 function wireForecastRefresh(){
   const btn=document.getElementById("fcRefresh"); if(!btn) return;
@@ -1283,7 +1341,7 @@ function wireForecastRefresh(){
     try{
       const res=await recomputeForecast(30000, p=>{ status.textContent="Running 30,000 simulations… "+Math.round(p*100)+"%"; }, ELO_OVERRIDE);
       WC2026.sims=res.sims; WC2026.asOf=res.asOf; WC2026.played=res.played; WC2026.total=res.total;
-      WC2026.playedAll=res.playedAll; WC2026.totalAll=res.totalAll; WC2026.teams=res.teams;
+      WC2026.playedAll=res.playedAll; WC2026.totalAll=res.totalAll; WC2026.teams=res.teams; WC2026.matchForecasts=res.matchForecasts;
       FORECAST_LIVE=true;   // the on-screen + exported forecast now reflect live results, not the build snapshot
       document.getElementById("liveTag").textContent="Live · "+WC2026.asOf;
       if(state.view!=="forecast") return;   // user navigated away mid-simulation — don't clobber their view
@@ -1311,7 +1369,7 @@ function wireEloRange(){
       ELO_YEAR=y||ELO_MIN_YEAR; ELO_OVERRIDE=override;
       const res=await recomputeForecast(20000, p=>{ status.textContent=(y?`Recomputing Elo since ${y} & simulating… `:"Re-simulating… ")+Math.round(p*100)+"%"; }, override);
       WC2026.sims=res.sims; WC2026.asOf=res.asOf; WC2026.played=res.played; WC2026.total=res.total;
-      WC2026.playedAll=res.playedAll; WC2026.totalAll=res.totalAll; WC2026.teams=res.teams;
+      WC2026.playedAll=res.playedAll; WC2026.totalAll=res.totalAll; WC2026.teams=res.teams; WC2026.matchForecasts=res.matchForecasts;
       FORECAST_LIVE=true;
       document.getElementById("liveTag").textContent="Live · "+WC2026.asOf;
       app.innerHTML=forecastHTML(); animateIn(); wireForecastRefresh(); wireEloRange();
