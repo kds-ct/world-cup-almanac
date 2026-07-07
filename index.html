@@ -1151,6 +1151,20 @@ async function recomputeForecast(N, onProgress, override){
   const LIVE=await fetch(OF_2026,{cache:"no-store"}).then(r=>r.json());
   LIVE.matches=await mergeEspnLive(LIVE.matches||[], true);   // condition the forecast on ESPN finals (fresher than openfootball)
   const isPlayed=m=>{const s=m.score;return !!(s&&s.ft&&s.ft.length===2&&s.ft[0]!=null);};
+  // live (in-progress) games: tag with the current score + minute so the sim can play out only the time left
+  let inPlayN=0;
+  try{ const events=await getEspnEvents(); const nm=n=>ESPN_ALIAS[n]||n, liveMap={};
+    for(const ev of (events||[])){ if(ev.status?.type?.state!=="in") continue;
+      const c=ev.competitions?.[0]; if(!c) continue; const cs=c.competitors||[]; if(cs.length!==2) continue;
+      const n1=nm(cs[0].team.displayName), n2=nm(cs[1].team.displayName), s1=parseInt(cs[0].score,10), s2=parseInt(cs[1].score,10);
+      if(!Number.isFinite(s1)||!Number.isFinite(s2)) continue;
+      let mn=parseInt(String(ev.status?.displayClock||"").match(/\d+/)?.[0]||"",10);
+      if(!Number.isFinite(mn)) mn=Math.round((+ev.status?.clock||2700)/60);
+      liveMap[[n1,n2].sort().join("|")]={s:{[n1]:s1,[n2]:s2}, min:Math.max(1,Math.min(90,mn))}; }
+    for(const m of LIVE.matches){ if(isPlaceholder(m.team1)||isPlaceholder(m.team2)||isPlayed(m)) continue;
+      const e=liveMap[[m.team1,m.team2].sort().join("|")]; if(!e) continue;
+      m._inplay={ca:e.s[m.team1], cb:e.s[m.team2], min:e.min}; inPlayN++; }
+  }catch(e){}
   const grp=LIVE.matches.filter(m=>String(m.group||"").startsWith("Group"));
   const playedG=grp.filter(isPlayed).slice().sort((a,b)=>(a.date||"").localeCompare(b.date||""));
   const asOf=playedG.length?playedG[playedG.length-1].date:WC2026.asOf;
@@ -1164,7 +1178,7 @@ async function recomputeForecast(N, onProgress, override){
     if(isPlayed(m)){ const fa=m.score.ft[0],fb=m.score.ft[1]; locked[g].push([a,b,fa,fb]);
       cur[a][0]++;cur[b][0]++;cur[a][2]+=fa;cur[a][3]+=fb;cur[b][2]+=fb;cur[b][3]+=fa;
       if(fa>fb)cur[a][1]+=3; else if(fb>fa)cur[b][1]+=3; else {cur[a][1]++;cur[b][1]++;} }
-    else remaining[g].push([a,b]); }
+    else remaining[g].push([a,b,m._inplay||null]); }
   // knockout result locking
   const isPh=n=>!n||/^\d/.test(n)||/^[WL]\d/.test(n)||n.includes("/");
   const koOf=m=>{const s=m.score||{}; if(s.p)return s.p[0]>s.p[1]?m.team1:m.team2; const base=s.et||s.ft;
@@ -1181,6 +1195,11 @@ async function recomputeForecast(N, onProgress, override){
   for(const m of LIVE.matches){ if(m.round==="Round of 32" && !isPh(m.team1) && !isPh(m.team2)){
     r32Actual[m.num]=[m.team1,m.team2]; koTeamsSet.add(m.team1); koTeamsSet.add(m.team2); } }
   const bracketSet = Object.keys(r32Actual).length===16;
+  // in-progress knockout games -> condition on the live score instead of a from-scratch coin flip
+  const koLive={};
+  for(const m of LIVE.matches){ if(!m._inplay || isPh(m.team1) || isPh(m.team2)) continue;
+    if(["Round of 32","Round of 16","Quarter-final","Semi-final","Final"].includes(m.round))
+      koLive[m.num]={a:m.team1,b:m.team2,ca:m._inplay.ca,cb:m._inplay.cb,min:m._inplay.min}; }
   // estimated card suspensions -> a banned player weakens their team's NEXT (remaining group) game,
   // weighted by how many goals they've scored (a proxy for how key they are).
   const susp={};
@@ -1192,9 +1211,17 @@ async function recomputeForecast(N, onProgress, override){
     for(const k in cardBy){ const p=cardBy[k];
       if(p.R>0 || p.Y>=2) susp[p.team] = Math.min(30, (susp[p.team]||0) + Math.min(22, 6 + 6*Math.min(goalsBy[p.name]||0, 3))); } }
   const pois=lam=>{const L=Math.exp(-lam);let k=0,p=1;do{k++;p*=Math.random();}while(p>L);return k-1;};
-  const simGoals=(ta,tb)=>{const dr=((RAT(ta)-(susp[ta]||0))+(HOSTS.has(ta)?HOST_BUMP:0))-((RAT(tb)-(susp[tb]||0))+(HOSTS.has(tb)?HOST_BUMP:0));
-    return [pois(Math.min(6,Math.max(0.05,GOAL_BASE*Math.pow(10,GOAL_GAMMA*dr/400)))),pois(Math.min(6,Math.max(0.05,GOAL_BASE*Math.pow(10,-GOAL_GAMMA*dr/400))))];};
+  const lam=(ta,tb)=>{const dr=((RAT(ta)-(susp[ta]||0))+(HOSTS.has(ta)?HOST_BUMP:0))-((RAT(tb)-(susp[tb]||0))+(HOSTS.has(tb)?HOST_BUMP:0));
+    return Math.min(6,Math.max(0.05,GOAL_BASE*Math.pow(10,GOAL_GAMMA*dr/400)));};      // expected goals for ta over a full match
+  const simGoals=(ta,tb)=>[pois(lam(ta,tb)),pois(lam(tb,ta))];
   const koW=(ta,tb)=>{const dr=(RAT(ta)+(HOSTS.has(ta)?HOST_BUMP:0))-(RAT(tb)+(HOSTS.has(tb)?HOST_BUMP:0));return Math.random()<eExp(dr)?ta:tb;};
+  // resolve a knockout tie: if it's in progress, play out only the minutes left from the live score; else full win-prob
+  const koResolve=(mnum,ta,tb)=>{ const L=koLive[mnum];
+    if(L && ((ta===L.a&&tb===L.b)||(ta===L.b&&tb===L.a))){ const f=Math.max(0.05,(90-L.min)/90);
+      const ca=ta===L.a?L.ca:L.cb, cb=ta===L.a?L.cb:L.ca;
+      const ga=ca+pois(lam(ta,tb)*f), gb=cb+pois(lam(tb,ta)*f);
+      return ga>gb?ta : gb>ga?tb : koW(ta,tb); }   // level after 90' -> extra time / penalties by rating
+    return koW(ta,tb); };
   const lock=(m,ta,tb)=> koWin[m] && ((ta===koWin[m][1]&&tb===koWin[m][2])||(ta===koWin[m][2]&&tb===koWin[m][1])) ? koWin[m][0] : null;
   const reach={}, winGroup={}; TEAMS.forEach(t=>{reach[t.name]={knockout:0,r16:0,quarter:0,semi:0,final:0,title:0};winGroup[t.name]=0;});
   function one(){
@@ -1202,7 +1229,10 @@ async function recomputeForecast(N, onProgress, override){
     for(const g of Object.keys(GROUPS)){ const teams=GROUPS[g], tab={}; teams.forEach(t=>tab[t]=[0,0,0]);
       for(const [a,b,fa,fb] of locked[g]){ tab[a][1]+=fa-fb;tab[b][1]+=fb-fa;tab[a][2]+=fa;tab[b][2]+=fb;
         if(fa>fb)tab[a][0]+=3;else if(fb>fa)tab[b][0]+=3;else{tab[a][0]++;tab[b][0]++;} }
-      for(const [a,b] of remaining[g]){ const r=simGoals(a,b),ga=r[0],gb=r[1]; tab[a][1]+=ga-gb;tab[b][1]+=gb-ga;tab[a][2]+=ga;tab[b][2]+=gb;
+      for(const [a,b,ip] of remaining[g]){ let ga,gb;
+        if(ip){ const f=Math.max(0.05,(90-ip.min)/90); ga=ip.ca+pois(lam(a,b)*f); gb=ip.cb+pois(lam(b,a)*f); }   // live: keep the score, play out the rest
+        else { ga=pois(lam(a,b)); gb=pois(lam(b,a)); }
+        tab[a][1]+=ga-gb;tab[b][1]+=gb-ga;tab[a][2]+=ga;tab[b][2]+=gb;
         if(ga>gb)tab[a][0]+=3;else if(gb>ga)tab[b][0]+=3;else{tab[a][0]++;tab[b][0]++;} }
       const rank=teams.slice().sort((x,y)=>tab[y][0]-tab[x][0]||tab[y][1]-tab[x][1]||tab[y][2]-tab[x][2]||Math.random()-0.5);
       pos["1"+g]=rank[0]; pos["2"+g]=rank[1]; winGroup[rank[0]]++;
@@ -1216,12 +1246,12 @@ async function recomputeForecast(N, onProgress, override){
     for(let m=73;m<=88;m++){ let ta,tb;
       if(bracketSet){ ta=r32Actual[m][0]; tb=r32Actual[m][1]; }
       else { const sa=R32T[m][0],sb=R32T[m][1]; ta=sa[0]==="3"?thirdTeam[ta3[m]]:pos[sa[0]+sa[1]]; tb=sb[0]==="3"?thirdTeam[ta3[m]]:pos[sb[0]+sb[1]]; }
-      const w=lock(m,ta,tb)||koW(ta,tb); winners[m]=w; reach[w].r16++; }
+      const w=lock(m,ta,tb)||koResolve(m,ta,tb); winners[m]=w; reach[w].r16++; }
     for(let m=89;m<=102;m++){ const ta=winners[LATERT[m][0]], tb=winners[LATERT[m][1]];
-      const w=lock(m,ta,tb)||koW(ta,tb); winners[m]=w;
+      const w=lock(m,ta,tb)||koResolve(m,ta,tb); winners[m]=w;
       if(m<=96)reach[w].quarter++; else if(m<=100)reach[w].semi++; else reach[w].final++; }
     const fA=winners[101],fB=winners[102];
-    let champ; if(finalWin && ((fA===finalWin[1]&&fB===finalWin[2])||(fA===finalWin[2]&&fB===finalWin[1]))) champ=finalWin[0]; else champ=koW(fA,fB);
+    let champ; if(finalWin && ((fA===finalWin[1]&&fB===finalWin[2])||(fA===finalWin[2]&&fB===finalWin[1]))) champ=finalWin[0]; else champ=koResolve(104,fA,fB);
     reach[champ].title++;
   }
   const CHUNK=5000;
@@ -1237,7 +1267,7 @@ async function recomputeForecast(N, onProgress, override){
   })).sort((a,b)=>b.ti-a.ti);
   const avgQ=TEAMS.reduce((s,t)=>s+reach[t.name].knockout,0)/N;
   const playedAll=LIVE.matches.filter(isPlayed).length, totalAll=LIVE.matches.length;
-  return {sims:N, asOf, played:playedG.length, total:grp.length, playedAll, totalAll, teams, avgQ};
+  return {sims:N, asOf, played:playedG.length, total:grp.length, playedAll, totalAll, teams, avgQ, inPlay:inPlayN};
 }
 function wireForecastRefresh(){
   const btn=document.getElementById("fcRefresh"); if(!btn) return;
@@ -1253,7 +1283,7 @@ function wireForecastRefresh(){
       if(state.view!=="forecast") return;   // user navigated away mid-simulation — don't clobber their view
       app.innerHTML=forecastHTML(); animateIn(); wireForecastRefresh(); wireEloRange();
       const s2=document.getElementById("fcRefreshStatus");
-      if(s2) s2.innerHTML=`<span style="color:var(--grass)">✓ Updated from live results</span> — ${res.played}/${res.total} group games played, as of ${res.asOf}.`;
+      if(s2) s2.innerHTML=`<span style="color:var(--grass)">✓ Updated from live results</span> — ${res.playedAll}/${res.totalAll} matches in${res.inPlay?`, <span style="color:var(--red)">${res.inPlay} live now (score factored in)</span>`:``}, as of ${res.asOf}.`;
     }catch(e){
       btn.disabled=false; btn.style.opacity="1"; btn.textContent="↻ Refresh with live results";
       status.innerHTML=`<span style="color:var(--red)">Couldn't refresh: ${escapeHtml(e.message)}</span>`;
@@ -1529,7 +1559,7 @@ let liveTimer = null, _allSig = null, _finSig = null;
 function onLiveResultsChanged(allChanged, finalsChanged){
   if(allChanged){ delete cache[2026]; getEspnEvents(true); }
   if(allChanged && state.view==="tournament" && state.year===2026) render();        // live standings / golden boot / etc.
-  if(finalsChanged && state.view==="forecast"){ const b=document.getElementById("fcRefresh"); if(b && !b.disabled) b.click(); }  // re-run forecast on a new final
+  if(allChanged && state.view==="forecast"){ const b=document.getElementById("fcRefresh"); if(b && !b.disabled) b.click(); }  // re-run forecast on any score/state change (new final OR a live goal)
 }
 const lflag = name => flag(ESPN_ALIAS[name] || name, "lflag");
 async function loadLiveScores(){

@@ -107,8 +107,10 @@ A pre-tournament prediction gets stale the moment games are played. So:
 
 - **Live conditioning.** We pull the real 2026 results (live, from ESPN) and **lock them in** — only the
   games that *haven't* happened yet are simulated. If Argentina have already won twice, every one of the
-  50,000 simulations starts from that fact. This is also why the whole 2026 page (standings, top scorers,
-  goal charts, bracket) updates as games finish — it all reads from the same live data.
+  50,000 simulations starts from that fact. A game that's **in progress** is handled too: we keep the
+  current score and only simulate the **minutes left** (a team 0–2 down with 15 minutes to go is in real
+  trouble, and the odds show it). This is also why the whole 2026 page (standings, top scorers, goal
+  charts, bracket) updates as games play — it all reads from the same live data.
 
 - **The betting market.** Bookmakers' odds quietly contain information our maths can't see: who's injured,
   who's out of form, which young players have broken through. So *(optionally)* we nudge each team's rating
