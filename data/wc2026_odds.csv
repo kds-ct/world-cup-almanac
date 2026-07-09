@@ -1,22 +1,22 @@
 # odds via the-odds-api.com; decimal odds averaged across EU/UK bookmakers; devig = vig-removed probability
 market,match,team_or_outcome,avg_decimal_odds,devig_probability,n_bookmakers
-winner,,France,3.04,0.322,5
-winner,,Spain,5.1,0.192,5
-winner,,Argentina,5.18,0.1892,5
-winner,,England,6.08,0.1608,5
-winner,,Norway,16.8,0.0583,5
-winner,,Morocco,34.8,0.0281,5
-winner,,Belgium,38.0,0.0258,5
-winner,,Switzerland,41.2,0.0239,5
-match_h2h,France v Morocco,France,1.57,0.6081,44
-match_h2h,France v Morocco,Morocco,6.51,0.1477,44
-match_h2h,France v Morocco,Draw,3.92,0.2441,44
-match_h2h,Spain v Belgium,Belgium,5.62,0.1709,44
-match_h2h,Spain v Belgium,Spain,1.63,0.5882,44
-match_h2h,Spain v Belgium,Draw,3.98,0.2408,44
-match_h2h,Norway v England,England,1.86,0.5145,44
-match_h2h,Norway v England,Norway,4.2,0.2285,44
-match_h2h,Norway v England,Draw,3.73,0.257,44
-match_h2h,Argentina v Switzerland,Argentina,1.72,0.5576,44
-match_h2h,Argentina v Switzerland,Switzerland,5.56,0.1728,44
-match_h2h,Argentina v Switzerland,Draw,3.55,0.2696,44
+winner,,France,3.12,0.3166,5
+winner,,Argentina,5.12,0.1926,5
+winner,,Spain,5.28,0.1868,5
+winner,,England,5.86,0.1683,5
+winner,,Norway,17.6,0.0562,5
+winner,,Morocco,33.8,0.0293,5
+winner,,Belgium,38.0,0.026,5
+winner,,Switzerland,41.2,0.0241,5
+match_h2h,France v Morocco,France,1.58,0.6078,44
+match_h2h,France v Morocco,Morocco,6.58,0.1468,44
+match_h2h,France v Morocco,Draw,3.92,0.2455,44
+match_h2h,Spain v Belgium,Belgium,5.53,0.1736,44
+match_h2h,Spain v Belgium,Spain,1.64,0.5834,44
+match_h2h,Spain v Belgium,Draw,3.95,0.243,44
+match_h2h,Norway v England,England,1.86,0.5148,44
+match_h2h,Norway v England,Norway,4.22,0.2273,44
+match_h2h,Norway v England,Draw,3.72,0.2579,44
+match_h2h,Argentina v Switzerland,Argentina,1.7,0.5633,45
+match_h2h,Argentina v Switzerland,Switzerland,5.67,0.1696,45
+match_h2h,Argentina v Switzerland,Draw,3.59,0.2672,45
