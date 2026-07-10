@@ -1,22 +1,18 @@
 # odds via the-odds-api.com; decimal odds averaged across EU/UK bookmakers; devig = vig-removed probability
 market,match,team_or_outcome,avg_decimal_odds,devig_probability,n_bookmakers
-winner,,France,3.12,0.3166,5
-winner,,Argentina,5.12,0.1926,5
-winner,,Spain,5.28,0.1868,5
-winner,,England,5.86,0.1683,5
+winner,,France,2.56,0.385,5
+winner,,Argentina,5.58,0.1764,5
+winner,,Spain,5.54,0.1776,5
+winner,,England,6.14,0.1606,5
 winner,,Norway,17.6,0.0562,5
-winner,,Morocco,33.8,0.0293,5
-winner,,Belgium,38.0,0.026,5
-winner,,Switzerland,41.2,0.0241,5
-match_h2h,France v Morocco,France,1.58,0.6078,44
-match_h2h,France v Morocco,Morocco,6.58,0.1468,44
-match_h2h,France v Morocco,Draw,3.92,0.2455,44
-match_h2h,Spain v Belgium,Belgium,5.53,0.1736,44
-match_h2h,Spain v Belgium,Spain,1.64,0.5834,44
-match_h2h,Spain v Belgium,Draw,3.95,0.243,44
-match_h2h,Norway v England,England,1.86,0.5148,44
-match_h2h,Norway v England,Norway,4.22,0.2273,44
-match_h2h,Norway v England,Draw,3.72,0.2579,44
-match_h2h,Argentina v Switzerland,Argentina,1.7,0.5633,45
-match_h2h,Argentina v Switzerland,Switzerland,5.67,0.1696,45
-match_h2h,Argentina v Switzerland,Draw,3.59,0.2672,45
+winner,,Belgium,42.8,0.0232,5
+winner,,Switzerland,48.0,0.021,5
+match_h2h,Spain v Belgium,Belgium,5.75,0.1674,46
+match_h2h,Spain v Belgium,Spain,1.62,0.5928,46
+match_h2h,Spain v Belgium,Draw,4.0,0.2399,46
+match_h2h,Norway v England,England,1.89,0.5086,46
+match_h2h,Norway v England,Norway,4.15,0.231,46
+match_h2h,Norway v England,Draw,3.68,0.2603,46
+match_h2h,Argentina v Switzerland,Argentina,1.69,0.5671,46
+match_h2h,Argentina v Switzerland,Switzerland,5.81,0.1659,46
+match_h2h,Argentina v Switzerland,Draw,3.59,0.2671,46
