@@ -1,18 +1,17 @@
 # odds via the-odds-api.com; decimal odds averaged across EU/UK bookmakers; devig = vig-removed probability
 market,match,team_or_outcome,avg_decimal_odds,devig_probability,n_bookmakers
-winner,,France,2.56,0.385,5
-winner,,Argentina,5.58,0.1764,5
-winner,,Spain,5.54,0.1776,5
-winner,,England,6.14,0.1606,5
-winner,,Norway,17.6,0.0562,5
-winner,,Belgium,42.8,0.0232,5
-winner,,Switzerland,48.0,0.021,5
-match_h2h,Spain v Belgium,Belgium,5.75,0.1674,46
-match_h2h,Spain v Belgium,Spain,1.62,0.5928,46
-match_h2h,Spain v Belgium,Draw,4.0,0.2399,46
-match_h2h,Norway v England,England,1.89,0.5086,46
-match_h2h,Norway v England,Norway,4.15,0.231,46
-match_h2h,Norway v England,Draw,3.68,0.2603,46
-match_h2h,Argentina v Switzerland,Argentina,1.69,0.5671,46
-match_h2h,Argentina v Switzerland,Switzerland,5.81,0.1659,46
-match_h2h,Argentina v Switzerland,Draw,3.59,0.2671,46
+winner,,France,2.6,0.3772,5
+winner,,Spain,4.51,0.218,5
+winner,,Argentina,5.62,0.1748,5
+winner,,England,6.3,0.1563,5
+winner,,Norway,17.8,0.0554,5
+winner,,Switzerland,54.2,0.0184,5
+match_h2h,Norway v England,England,1.94,0.4962,46
+match_h2h,Norway v England,Norway,3.91,0.2458,46
+match_h2h,Norway v England,Draw,3.73,0.258,46
+match_h2h,Argentina v Switzerland,Argentina,1.7,0.5668,46
+match_h2h,Argentina v Switzerland,Switzerland,5.8,0.166,46
+match_h2h,Argentina v Switzerland,Draw,3.6,0.2672,46
+match_h2h,France v Spain,France,2.34,0.4088,45
+match_h2h,France v Spain,Spain,3.23,0.2964,45
+match_h2h,France v Spain,Draw,3.25,0.2949,45
