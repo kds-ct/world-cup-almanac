@@ -1,17 +1,12 @@
 # odds via the-odds-api.com; decimal odds averaged across EU/UK bookmakers; devig = vig-removed probability
 market,match,team_or_outcome,avg_decimal_odds,devig_probability,n_bookmakers
-winner,,France,2.6,0.3772,5
-winner,,Spain,4.51,0.218,5
-winner,,Argentina,5.62,0.1748,5
-winner,,England,6.3,0.1563,5
-winner,,Norway,17.8,0.0554,5
-winner,,Switzerland,54.2,0.0184,5
-match_h2h,Norway v England,England,1.94,0.4962,46
-match_h2h,Norway v England,Norway,3.91,0.2458,46
-match_h2h,Norway v England,Draw,3.73,0.258,46
-match_h2h,Argentina v Switzerland,Argentina,1.7,0.5668,46
-match_h2h,Argentina v Switzerland,Switzerland,5.8,0.166,46
-match_h2h,Argentina v Switzerland,Draw,3.6,0.2672,46
-match_h2h,France v Spain,France,2.34,0.4088,45
-match_h2h,France v Spain,Spain,3.23,0.2964,45
-match_h2h,France v Spain,Draw,3.25,0.2949,45
+winner,,France,2.59,0.3801,5
+winner,,England,4.51,0.2183,5
+winner,,Spain,4.52,0.2181,5
+winner,,Argentina,5.36,0.1836,5
+match_h2h,France v Spain,France,2.32,0.4133,47
+match_h2h,France v Spain,Spain,3.29,0.2917,47
+match_h2h,France v Spain,Draw,3.25,0.295,47
+match_h2h,England v Argentina,Argentina,3.08,0.311,46
+match_h2h,England v Argentina,England,2.56,0.3741,46
+match_h2h,England v Argentina,Draw,3.04,0.3149,46
