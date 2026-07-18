@@ -39,14 +39,14 @@
    "form": "WWWWW",
    "form_pts": 15,
    "form_gd": 12,
-   "mkt_title": 0.4147,
+   "mkt_title": 0.412,
    "p_win_group": 1.0,
    "p_knockout": 1.0,
    "p_r16": 1.0,
    "p_quarter": 1.0,
    "p_semi": 1.0,
    "p_final": 1.0,
-   "p_title": 0.5061
+   "p_title": 0.5087
   },
   {
    "team": "Spain",
@@ -65,14 +65,14 @@
    "form": "DWDWW",
    "form_pts": 11,
    "form_gd": 7,
-   "mkt_title": 0.5853,
+   "mkt_title": 0.588,
    "p_win_group": 1.0,
    "p_knockout": 1.0,
    "p_r16": 1.0,
    "p_quarter": 1.0,
    "p_semi": 1.0,
    "p_final": 1.0,
-   "p_title": 0.4939
+   "p_title": 0.4913
   },
   {
    "team": "Mexico",
