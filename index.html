@@ -333,9 +333,9 @@ const DEFUNCT = new Set(["Soviet Union","West Germany","East Germany","Czechoslo
 /* 2026 forecast — World-Football Elo (computed from scratch over all internationals) + Monte-Carlo of the real
    2026 format (12 groups, top-2 + 8 best thirds, official R32→Final bracket). Built by tools/build_wc2026_dataset.py.
    Fields: t=team c=confed g=group e=elo h=host wg=P(win group) ko=P(reach knockout) qf/sf/fn=P(reach QF/SF/Final) ti=P(title). */
-const WC2026={sims:50000,he:50,gb:1.150,gg:0.330,mb:0,asOf:"2026-06-27",played:72,total:72,playedAll:102,totalAll:104,conf:{data:93,C:100,R:93,S:84,fs:31},teams:[
-{t:"Argentina",c:"CONMEBOL",g:"J",e:2220,e0:2185,h:0,pl:3,pts:9,gd:7,fm:"WWWWW",fp:15,fgd:12,mt:0.4120,wg:1.000,ko:1.000,qf:1.000,sf:1.000,fn:1.000,ti:0.5087,fr:1,fpt:1877.27,fe:2169},
-{t:"Spain",c:"UEFA",g:"H",e:2210,e0:2220,h:0,pl:3,pts:7,gd:5,fm:"DWDWW",fp:11,fgd:7,mt:0.5880,wg:1.000,ko:1.000,qf:1.000,sf:1.000,fn:1.000,ti:0.4913,fr:2,fpt:1874.71,fe:2167},
+const WC2026={sims:50000,he:50,gb:1.150,gg:0.330,mb:0,asOf:"2026-06-27",played:72,total:72,playedAll:103,totalAll:104,conf:{data:93,C:100,R:93,S:84,fs:31},teams:[
+{t:"Argentina",c:"CONMEBOL",g:"J",e:2220,e0:2185,h:0,pl:3,pts:9,gd:7,fm:"WWWWW",fp:15,fgd:12,mt:0.4135,wg:1.000,ko:1.000,qf:1.000,sf:1.000,fn:1.000,ti:0.5129,fr:1,fpt:1877.27,fe:2169},
+{t:"Spain",c:"UEFA",g:"H",e:2209,e0:2220,h:0,pl:3,pts:7,gd:5,fm:"DWDWW",fp:11,fgd:7,mt:0.5865,wg:1.000,ko:1.000,qf:1.000,sf:1.000,fn:1.000,ti:0.4871,fr:2,fpt:1874.71,fe:2167},
 {t:"Mexico",c:"CONCACAF",g:"A",e:2024,e0:1979,h:1,pl:3,pts:9,gd:6,fm:"WWWWW",fp:15,fgd:11,mt:0.0000,wg:1.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:14,fpt:1687.48,fe:1983},
 {t:"South Africa",c:"CAF",g:"A",e:1710,e0:1663,h:0,pl:3,pts:4,gd:-1,fm:"DWLDW",fp:8,fgd:0,mt:0.0000,wg:0.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:60,fpt:1428.38,fe:1729},
 {t:"South Korea",c:"AFC",g:"A",e:1838,e0:1880,h:0,pl:3,pts:3,gd:-1,fm:"WWWLL",fp:9,fgd:5,mt:0.0000,wg:0.000,ko:0.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:25,fpt:1591.63,fe:1889},
@@ -352,14 +352,14 @@ const WC2026={sims:50000,he:50,gb:1.150,gg:0.330,mb:0,asOf:"2026-06-27",played:7
 {t:"Paraguay",c:"CONMEBOL",g:"D",e:1893,e0:1916,h:0,pl:3,pts:4,gd:-2,fm:"LWLWD",fp:7,fgd:1,mt:0.0000,wg:0.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:41,fpt:1505.35,fe:1805},
 {t:"Australia",c:"AFC",g:"D",e:1903,e0:1897,h:0,pl:3,pts:4,gd:0,fm:"LDWLD",fp:5,fgd:-1,mt:0.0000,wg:0.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:27,fpt:1579.34,fe:1877},
 {t:"Turkey",c:"UEFA",g:"D",e:1917,e0:1966,h:0,pl:3,pts:3,gd:-2,fm:"WWLLW",fp:9,fgd:3,mt:0.0000,wg:0.000,ko:0.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:22,fpt:1605.73,fe:1903},
-{t:"Germany",c:"UEFA",g:"E",e:1995,e0:2002,h:0,pl:3,pts:6,gd:6,fm:"WWWWL",fp:12,fgd:11,mt:0.0000,wg:1.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:10,fpt:1735.77,fe:2031},
+{t:"Germany",c:"UEFA",g:"E",e:1995,e0:2002,h:0,pl:3,pts:6,gd:6,fm:"WWWWL",fp:12,fgd:11,mt:0.0000,wg:1.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:10,fpt:1735.77,fe:2030},
 {t:"Curaçao",c:"CONCACAF",g:"E",e:1608,e0:1618,h:0,pl:3,pts:1,gd:-8,fm:"LWLDL",fp:4,fgd:-7,mt:0.0000,wg:0.000,ko:0.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:82,fpt:1294.77,fe:1599},
 {t:"Ivory Coast",c:"CAF",g:"E",e:1863,e0:1814,h:0,pl:3,pts:6,gd:2,fm:"WWWLW",fp:12,fgd:4,mt:0.0000,wg:0.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:33,fpt:1540.87,fe:1840},
 {t:"Ecuador",c:"CONMEBOL",g:"E",e:1993,e0:2027,h:0,pl:3,pts:4,gd:0,fm:"WWLDW",fp:10,fgd:4,mt:0.0000,wg:0.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:23,fpt:1598.52,fe:1896},
 {t:"Netherlands",c:"UEFA",g:"F",e:2044,e0:2008,h:0,pl:3,pts:7,gd:6,fm:"LWDWW",fp:10,fgd:6,mt:0.0000,wg:1.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:8,fpt:1753.57,fe:2048},
 {t:"Japan",c:"AFC",g:"F",e:1989,e0:1988,h:0,pl:3,pts:5,gd:4,fm:"WWDWD",fp:11,fgd:6,mt:0.0000,wg:0.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:18,fpt:1661.58,fe:1958},
 {t:"Sweden",c:"UEFA",g:"F",e:1807,e0:1768,h:0,pl:3,pts:4,gd:0,fm:"LDWLD",fp:5,fgd:-2,mt:0.0000,wg:0.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:38,fpt:1509.79,fe:1809},
-{t:"Tunisia",c:"CAF",g:"F",e:1657,e0:1733,h:0,pl:3,pts:0,gd:-10,fm:"LLLLL",fp:0,fgd:-16,mt:0.0000,wg:0.000,ko:0.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:45,fpt:1476.41,fe:1776},
+{t:"Tunisia",c:"CAF",g:"F",e:1657,e0:1733,h:0,pl:3,pts:0,gd:-10,fm:"LLLLL",fp:0,fgd:-16,mt:0.0000,wg:0.000,ko:0.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:45,fpt:1476.41,fe:1777},
 {t:"Belgium",c:"UEFA",g:"G",e:1961,e0:1954,h:0,pl:3,pts:5,gd:4,fm:"WWDDW",fp:11,fgd:11,mt:0.0000,wg:1.000,ko:1.000,qf:1.000,sf:0.000,fn:0.000,ti:0.0000,fr:9,fpt:1742.24,fe:2037},
 {t:"Egypt",c:"CAF",g:"G",e:1859,e0:1810,h:0,pl:3,pts:5,gd:2,fm:"WLDWD",fp:8,fgd:2,mt:0.0000,wg:0.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:29,fpt:1562.37,fe:1861},
 {t:"Iran",c:"AFC",g:"G",e:1885,e0:1896,h:0,pl:3,pts:3,gd:0,fm:"WWDDD",fp:9,fgd:4,mt:0.0000,wg:0.000,ko:0.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:20,fpt:1619.58,fe:1917},
@@ -367,7 +367,7 @@ const WC2026={sims:50000,he:50,gb:1.150,gg:0.330,mb:0,asOf:"2026-06-27",played:7
 {t:"Cape Verde",c:"CAF",g:"H",e:1703,e0:1655,h:0,pl:3,pts:3,gd:0,fm:"WLDDD",fp:6,fgd:0,mt:0.0000,wg:0.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:67,fpt:1371.11,fe:1673},
 {t:"Saudi Arabia",c:"AFC",g:"H",e:1705,e0:1692,h:0,pl:3,pts:2,gd:-4,fm:"WDDLD",fp:6,fgd:-1,mt:0.0000,wg:0.000,ko:0.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:61,fpt:1423.88,fe:1725},
 {t:"Uruguay",c:"CONMEBOL",g:"H",e:1924,e0:1974,h:0,pl:3,pts:2,gd:-1,fm:"DDDDL",fp:4,fgd:-1,mt:0.0000,wg:0.000,ko:0.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:16,fpt:1673.07,fe:1969},
-{t:"France",c:"UEFA",g:"I",e:2189,e0:2129,h:0,pl:3,pts:9,gd:8,fm:"LWWWW",fp:12,fgd:9,mt:0.0000,wg:1.000,ko:1.000,qf:1.000,sf:1.000,fn:0.000,ti:0.0000,fr:3,fpt:1870.70,fe:2163},
+{t:"France",c:"UEFA",g:"I",e:2184,e0:2122,h:0,pl:3,pts:9,gd:8,fm:"LWWWW",fp:12,fgd:9,mt:0.0000,wg:1.000,ko:1.000,qf:1.000,sf:1.000,fn:0.000,ti:0.0000,fr:3,fpt:1870.70,fe:2163},
 {t:"Senegal",c:"CAF",g:"I",e:1904,e0:1913,h:0,pl:3,pts:3,gd:2,fm:"LDLLW",fp:4,fgd:1,mt:0.0000,wg:0.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:15,fpt:1684.07,fe:1980},
 {t:"Iraq",c:"AFC",g:"I",e:1672,e0:1735,h:0,pl:3,pts:0,gd:-11,fm:"DLLLL",fp:1,fgd:-13,mt:0.0000,wg:0.000,ko:0.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:57,fpt:1446.28,fe:1747},
 {t:"Norway",c:"UEFA",g:"I",e:1980,e0:1969,h:0,pl:3,pts:6,gd:1,fm:"WDWWL",fp:10,fgd:3,mt:0.0000,wg:0.000,ko:1.000,qf:1.000,sf:0.000,fn:0.000,ti:0.0000,fr:31,fpt:1557.44,fe:1856},
@@ -378,8 +378,8 @@ const WC2026={sims:50000,he:50,gb:1.150,gg:0.330,mb:0,asOf:"2026-06-27",played:7
 {t:"DR Congo",c:"CAF",g:"K",e:1819,e0:1763,h:0,pl:3,pts:4,gd:1,fm:"DLDLW",fp:5,fgd:0,mt:0.0000,wg:0.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:46,fpt:1474.43,fe:1775},
 {t:"Uzbekistan",c:"AFC",g:"K",e:1731,e0:1820,h:0,pl:3,pts:0,gd:-9,fm:"LLLLL",fp:0,fgd:-12,mt:0.0000,wg:0.000,ko:0.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:50,fpt:1458.73,fe:1759},
 {t:"Colombia",c:"CONMEBOL",g:"K",e:2086,e0:2063,h:0,pl:3,pts:7,gd:3,fm:"WWWWD",fp:13,fgd:7,mt:0.0000,wg:1.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:13,fpt:1698.35,fe:1994},
-{t:"England",c:"UEFA",g:"L",e:2100,e0:2081,h:0,pl:3,pts:7,gd:4,fm:"WWWDW",fp:13,fgd:8,mt:0.0000,wg:1.000,ko:1.000,qf:1.000,sf:1.000,fn:0.000,ti:0.0000,fr:4,fpt:1828.02,fe:2121},
-{t:"Croatia",c:"UEFA",g:"L",e:1966,e0:1966,h:0,pl:3,pts:6,gd:0,fm:"LWLWW",fp:9,fgd:-1,mt:0.0000,wg:0.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:11,fpt:1714.87,fe:2010},
+{t:"England",c:"UEFA",g:"L",e:2105,e0:2088,h:0,pl:3,pts:7,gd:4,fm:"WWWDW",fp:13,fgd:8,mt:0.0000,wg:1.000,ko:1.000,qf:1.000,sf:1.000,fn:0.000,ti:0.0000,fr:4,fpt:1828.02,fe:2121},
+{t:"Croatia",c:"UEFA",g:"L",e:1967,e0:1966,h:0,pl:3,pts:6,gd:0,fm:"LWLWW",fp:9,fgd:-1,mt:0.0000,wg:0.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:11,fpt:1714.87,fe:2010},
 {t:"Ghana",c:"CAF",g:"L",e:1687,e0:1625,h:0,pl:3,pts:4,gd:0,fm:"LDWDL",fp:5,fgd:-2,mt:0.0000,wg:0.000,ko:1.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:73,fpt:1346.88,fe:1650},
 {t:"Panama",c:"CONCACAF",g:"L",e:1774,e0:1854,h:0,pl:3,pts:0,gd:-4,fm:"WDLLL",fp:4,fgd:-2,mt:0.0000,wg:0.000,ko:0.000,qf:0.000,sf:0.000,fn:0.000,ti:0.0000,fr:34,fpt:1539.16,fe:1838}
 ]};

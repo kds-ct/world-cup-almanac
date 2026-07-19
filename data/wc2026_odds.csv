@@ -1,10 +1,7 @@
 # odds via the-odds-api.com; decimal odds averaged across EU/UK bookmakers; devig = vig-removed probability
 market,match,team_or_outcome,avg_decimal_odds,devig_probability,n_bookmakers
-winner,,Spain,1.68,0.588,5
-winner,,Argentina,2.4,0.412,5
-match_h2h,France v England,England,3.85,0.2493,47
-match_h2h,France v England,France,1.87,0.5131,47
-match_h2h,France v England,Draw,4.04,0.2376,47
-match_h2h,Spain v Argentina,Argentina,3.61,0.266,47
-match_h2h,Spain v Argentina,Spain,2.29,0.4188,47
-match_h2h,Spain v Argentina,Draw,3.04,0.3153,47
+winner,,Spain,1.68,0.5865,5
+winner,,Argentina,2.38,0.4135,5
+match_h2h,Spain v Argentina,Argentina,3.62,0.2655,47
+match_h2h,Spain v Argentina,Spain,2.31,0.4165,47
+match_h2h,Spain v Argentina,Draw,3.02,0.3179,47
