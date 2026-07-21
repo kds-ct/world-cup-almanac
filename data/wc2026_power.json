@@ -6,7 +6,7 @@
  "group_matches_played": 72,
  "group_matches_total": 72,
  "avg_qualifiers_per_sim": 32.0,
- "matches_played": 103,
+ "matches_played": 104,
  "matches_total": 104,
  "confidence": {
   "data": 93,
@@ -22,32 +22,6 @@
   "note": "Official FIFA/Coca-Cola ranking (frozen 11 Jun 2026, next 20 Jul) rescaled to our Elo distribution (fifa_elo_equiv) and blended into the sim's strength anchor."
  },
  "teams": [
-  {
-   "team": "Argentina",
-   "confederation": "CONMEBOL",
-   "group": "J",
-   "code": "ARG",
-   "elo": 2223.0,
-   "elo_pre": 2189.0,
-   "fifa_rank": 1,
-   "fifa_points": 1877.27,
-   "fifa_elo_equiv": 2169,
-   "host": false,
-   "pl": 3,
-   "pts": 9,
-   "gd": 7,
-   "form": "WWWWW",
-   "form_pts": 15,
-   "form_gd": 12,
-   "mkt_title": 0,
-   "p_win_group": 1.0,
-   "p_knockout": 1.0,
-   "p_r16": 1.0,
-   "p_quarter": 1.0,
-   "p_semi": 1.0,
-   "p_final": 1.0,
-   "p_title": 0.5136
-  },
   {
    "team": "Spain",
    "confederation": "UEFA",
@@ -72,7 +46,7 @@
    "p_quarter": 1.0,
    "p_semi": 1.0,
    "p_final": 1.0,
-   "p_title": 0.4864
+   "p_title": 1.0
   },
   {
    "team": "Mexico",
@@ -982,6 +956,32 @@
    "p_quarter": 1.0,
    "p_semi": 0.0,
    "p_final": 0.0,
+   "p_title": 0.0
+  },
+  {
+   "team": "Argentina",
+   "confederation": "CONMEBOL",
+   "group": "J",
+   "code": "ARG",
+   "elo": 2223.0,
+   "elo_pre": 2189.0,
+   "fifa_rank": 1,
+   "fifa_points": 1877.27,
+   "fifa_elo_equiv": 2169,
+   "host": false,
+   "pl": 3,
+   "pts": 9,
+   "gd": 7,
+   "form": "WWWWW",
+   "form_pts": 15,
+   "form_gd": 12,
+   "mkt_title": 0,
+   "p_win_group": 1.0,
+   "p_knockout": 1.0,
+   "p_r16": 1.0,
+   "p_quarter": 1.0,
+   "p_semi": 1.0,
+   "p_final": 1.0,
    "p_title": 0.0
   },
   {
