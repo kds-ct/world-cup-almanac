@@ -11,7 +11,7 @@
  "confidence": {
   "data": 92,
   "C": 100,
-  "R": 89,
+  "R": 88,
   "S": 84,
   "fs": 31
  },
@@ -963,7 +963,7 @@
    "confederation": "CONMEBOL",
    "group": "J",
    "code": "ARG",
-   "elo": 2223.0,
+   "elo": 2224.0,
    "elo_pre": 2189.0,
    "fifa_rank": 1,
    "fifa_points": 1877.27,
@@ -1042,7 +1042,7 @@
    "group": "J",
    "code": "JOR",
    "elo": 1719.0,
-   "elo_pre": 1775.0,
+   "elo_pre": 1774.0,
    "fifa_rank": 63,
    "fifa_points": 1387.74,
    "fifa_elo_equiv": 1690,
